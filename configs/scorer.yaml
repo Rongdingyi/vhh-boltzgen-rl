@@ -1,0 +1,8 @@
+scorer:
+  name: vhh_source_ensemble
+  # AUDIT (docs/AUDIT.md): camelid_native_likeness_score is a probability
+  # over the frozen VHH-source ensemble; HIGHER = more camelid-native.
+  direction: higher_is_better
+  objective: native_probability
+  env: /share/home/rongdingyi/.conda/envs/vhh-guidance-esmc/bin/python
+  cache: true

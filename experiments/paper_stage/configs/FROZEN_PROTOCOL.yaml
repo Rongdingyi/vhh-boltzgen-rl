@@ -1,0 +1,77 @@
+# FROZEN_PROTOCOL.yaml — CF-DPO paper stage (task book §55)
+# Any change requires a new protocol version.
+version: 1
+frozen_at: "2026-09-14"
+
+base_checkpoint: /share/home/rongdingyi/programs/proteingen/boltzgen/ckpts/boltzgen1_diverse.ckpt
+base_checkpoint_sha256: 360af8bd6e59527ff6ec25dd81253967f3bd3567d200053b10680634751f8e3c
+boltzgen_commit: a3149cf18eeb58648d1abbb27539bd73f746cdda
+
+pair_dataset: /share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl/runs/native_pool/pairs_train.jsonl
+pair_dataset_sha256: fd9776fd8e82d2be57904b5f82ddd84cbfae4831d27e8ac54eb2713aae338b39
+reward_cache: /share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl/runs/native_pool/reward_cache.sqlite3
+
+scorer:
+  objective: cdr_margin_guarded  # scores = cdr_camelid_margin
+  predictor_root: /share/home/rongdingyi/programs/proteingen/vhh_source
+  esmc_model: esmc_600m
+  ensemble_sha256:
+    v3_seed20260810: f32fa98f402aec80569d1f2e5c963766bc5826ea1f06d6d78b6f5e2021266c7f
+    v3_seed20260811: 09b03cf8ee46d66fb589742559411197a6e79706188d952faeafbda3f453db94
+    v3_seed20260812: 75c17bd7f114ef8a885778e8cbc596ceda1669385f91d1351ed1e2a1fe9544bf
+    v4_region_seed20260810: 48f06b2316b5a7fae794c31a69cfe3355fa67c3ac48e7b8d6646786a80b9565b
+    v4_region_seed20260811: 63b78cce2d597df1bea8cbc94474961ffd2ce49b1d1c0efb69dc4e0b6cb2967b
+    v4_region_seed20260812: 79dbaea6a84ffb71a90c221a805d64e26d0070986ad0bda42a438e1bcf228068
+  ood_reference_sha256: 06ad82a4134a8a1f212f4fe797368b63e90169fee8c941c3566a25c8ae65df97
+
+training:
+  beta: 10.0
+  eta: 0.75
+  train_lr: 1.0e-5
+  weight_decay: 0.0
+  max_steps: 500
+  checkpoint_every: 50
+  max_grad_norm: 1.0
+  trainable_scope: structure_module.score_model
+  optimizer: AdamW
+  preference_aggregation: cdr_fake_atoms (per residue, credit weights)
+  training_seeds:
+    primary: 20260913   # existing B3/N3/B2 headline runs (seed-42 equivalent, kept as-is)
+    extra: [43, 44]
+  generation_batch_size: 8
+
+data:
+  heldout_cases: [sab2_4hf5_h, sab2_4mwf_h, sab2_5mp6_h, sab2_6cvk_b2, sab2_6e62_b, sab2_6oq8_d, sab2_6s2i_a, sab2_8dpm_d]
+  train_cases: 24
+  valid100_manifest: /share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl/runs/round1_rl_split/rl_manifest_valid100test.jsonl
+  valid100_manifest_sha256: d5c6891792eea89c2818480120809f49e5b457baa224ab28f996759eec4860d9
+  split_manifest: /share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl/runs/round1_rl_split/rl_manifest_split.jsonl
+  split_manifest_sha256: 7d143bedee5eba3a70f817a788941037024134078ba173533cc2877cf3fa3e20
+  credit_files:
+    residue_credit: runs/next_stage/counterfactual/residue_credit.csv
+    region_credit: runs/next_stage/counterfactual/region_credit.csv
+    weights: runs/next_stage/weights/residue_weights.json
+
+generation:
+  sampling_steps: 50
+  step_scale: 2.0        # design protocol value observed in official logs
+  noise_scale: 0.88
+  eval_seed_offset: 700000
+  num_samples: 8
+  schedule: official AtomDiffusion AF3 schedule (frozen)
+
+checkpoint_selection:
+  split: heldout (8 cases)
+  samples_per_case: 8
+  rule: max held-out reward with invalid_rate <= base+1pp and FR mismatch == 0
+  valid100_used_for_selection: false
+
+refold:
+  primary: boltz-2
+  checkpoint: /share/home/rongdingyi/programs/proteingen/boltzgen/ckpts/boltz2_conf_final.ckpt
+  recycling_steps: 3
+  sampling_steps: 200
+  diffusion_samples: 1
+  independent: protenix-v2
+  metrics: [CDR RMSD, CDR1 RMSD, CDR2 RMSD, CDR3 RMSD, FR RMSD, pLDDT(CDR), recovery]
+  statistics_unit: case

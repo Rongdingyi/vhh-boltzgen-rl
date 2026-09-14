@@ -1,0 +1,36 @@
+# Fixed case selection for all CF-OPSD probes (task book §10).
+# Chosen 2026-09-14 from base train pool reward ranking (mid-headroom band),
+# held-out = first 4 sorted test cases. Never changed after this point.
+
+train_cases:
+  - sab2_6u52_c    # base reward +3.49
+  - sab2_7sl5_d    # +4.91
+  - sab2_7nqk_b    # +4.97
+  - sab2_6mqe_h    # +5.22
+
+heldout_cases:
+  - sab2_4hf5_h
+  - sab2_4mwf_h
+  - sab2_5mp6_h
+  - sab2_6cvk_b2
+
+rollout:
+  K: 8
+  sampling_steps: 50
+
+query:
+  candidate_progress: [0.60, 0.70, 0.80, 0.90]
+  min_valid_rate: 0.90
+  min_cdr_identity: 0.80
+
+credit:
+  type: conservative_bidirectional
+  eta: 0.75
+
+target:
+  source: winner_local_geometry
+  radii_angstrom: [0.25, 0.50, 1.00]
+  credit_scale: sqrt
+
+reward:
+  name: cdr_camelid_margin

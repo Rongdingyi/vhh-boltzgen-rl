@@ -1,0 +1,23 @@
+[project]
+name = "vhh-boltzgen-rl"
+version = "0.1.0"
+description = "Round-1 sequence-reward RL on the BoltzGen inverse-folding decoder (GRPO-style, frozen reference KL)."
+requires-python = ">=3.10"
+dependencies = [
+    "torch",
+    "pyyaml",
+    "numpy",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+vhh-rl = "vhh_rl.cli.main:main"

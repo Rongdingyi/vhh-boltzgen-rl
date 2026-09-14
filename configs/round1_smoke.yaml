@@ -1,0 +1,33 @@
+project: vhh_boltzgen_rl_round1_debug
+seed: 42
+boltzgen_root: ${BOLTZGEN_ROOT}
+boltzgen_checkpoint: ${BOLTZGEN_CKPT}
+scorer_root: ${VHH_SCORER_ROOT}
+manifest: ${VHH_RL_DATA}
+output_root: runs
+device: cuda
+precision: fp32
+mode: baseline
+max_cases: 2
+debug_cases: []
+sampling:
+  temperature: "0.5"
+  group_size: 8
+reward:
+  name: toy
+  direction: higher_is_better
+advantage:
+  type: rank
+algorithm:
+  name: grpo
+  clip_eps: 0.20
+  update_epochs: 2
+  beta_kl: 0.01
+optimizer:
+  lr: 1.0e-5
+training:
+  cases_per_rollout_batch: 1
+  max_updates: 20
+  checkpoint_every: 10
+evaluation:
+  num_samples_per_case: 8

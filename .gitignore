@@ -1,0 +1,24 @@
+# Large experiment outputs (checkpoints, rollouts, generated structures)
+runs/
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Editors / tools
+.vscode/
+.idea/
+
+# Slurm / logs
+*.out
+*.err
+logs/
+
+# Local caches and credentials
+*.sqlite
+*.sqlite3
+.netrc
+.git-credentials
