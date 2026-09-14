@@ -17,7 +17,8 @@ BASE = Path("/share/home/rongdingyi/programs/proteingen/boltzgen/ckpts/boltzgen1
 def main() -> None:
     result = run_onpolicy(
         base_checkpoint=BASE,
-        config_path=ROOT / "configs/cf_opsd/fixed_cases.yaml",
+        case_config=ROOT / "configs/cf_opsd/fixed_cases.yaml",
+        loop_config=ROOT / "configs/cf_opsd/onpolicy_v1.yaml",
         query_probe=ROOT / "runs/cf_opsd/query_probe.json",
         target_probe=ROOT / "runs/cf_opsd/target_probe/gate_b.json",
         output_dir=ROOT / "runs/cf_opsd/onpolicy_v1",

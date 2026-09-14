@@ -1,0 +1,34 @@
+# CF-OPSD on-policy v1 config (task book §86). Merged with fixed_cases.yaml
+# by cf_opsd_onpolicy_pilot.py; all sections read by onpolicy_trainer.run_onpolicy.
+method: cf_opsd_onpolicy_v1
+
+base:
+  checkpoint: native_base
+
+outer:
+  rounds: 4
+  behavior_ema_decay: 0.99
+
+rollout:
+  K: 8
+  sampling_steps: 50
+
+pairing:
+  pairs_per_case: 2
+
+query:
+  progress: AUTO_FROM_PHASE_B
+
+target:
+  radius_angstrom: AUTO_FROM_PHASE_B
+  credit_scale: sqrt
+
+fit:
+  updates_per_round: 25
+  loss: target_mask_only
+
+optimizer:
+  name: adamw
+  lr: 1.0e-5
+  weight_decay: 0.0
+  max_grad_norm: 1.0

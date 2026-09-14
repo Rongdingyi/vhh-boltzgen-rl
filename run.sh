@@ -135,6 +135,8 @@ case "$CMD" in
     run_gate /usr/bin/python3 "$ROOT/scripts/cf_opsd_probe_queries.py" ;;
   cf-opsd-target-probe)
     run_gate "$ROOT/scripts/sbatch_cf_opsd_target.sh" ;;
+  cf-opsd-target-report)
+    run_gate /usr/bin/python3 "$ROOT/scripts/cf_opsd_target_report.py" ;;
   cf-opsd-realization-probe)
     run_gate "$ROOT/scripts/sbatch_cf_opsd_realization.sh" ;;
   cf-opsd-static)

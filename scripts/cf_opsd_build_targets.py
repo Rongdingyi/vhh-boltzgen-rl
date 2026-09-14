@@ -239,10 +239,11 @@ def main() -> None:
         w = csv.DictWriter(fh, fieldnames=list(radius_rows[0].keys()))
         w.writeheader()
         w.writerows(radius_rows)
-    with (OUT / "control_metrics.csv").open("w", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=list(control_rows[0].keys()))
-        w.writeheader()
-        w.writerows(control_rows)
+    if control_rows:
+        with (OUT / "control_metrics.csv").open("w", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=list(control_rows[0].keys()))
+            w.writeheader()
+            w.writerows(control_rows)
 
     summary = {"q_star_progress": q_star, "query_status": status,
                "radii": radius_rows, "gate_b": gate, "selected_radius": selected_radius}

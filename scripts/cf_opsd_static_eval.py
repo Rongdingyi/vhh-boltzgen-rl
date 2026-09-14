@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-import statistics as st
+import re
 import sys
 from pathlib import Path
 
@@ -17,6 +17,48 @@ from vhh_rl.cf_opsd.evaluator import evaluate  # noqa: E402
 CFG = ROOT / "configs/cf_opsd/fixed_cases.yaml"
 OUT = ROOT / "runs/cf_opsd/pilot_eval"
 DOC = ROOT / "docs/cf_opsd/CF_OPSD_PILOT_RESULTS.md"
+
+
+def parse_arm(tag: str) -> tuple[str, int | None]:
+    m = re.match(r"^(cf_dpo_mini|cf_opsd_static)_u(\d+)$", tag)
+    if not m:
+        return tag, None
+    return m.group(1), int(m.group(2))
+
+
+def build_rows(results: dict) -> list[dict]:
+    """Pure helper (regression-tested): results tag -> summary rows with step."""
+    base = results.get("base", {}).get("reward_mean")
+    rows = []
+    for tag, res in results.items():
+        if tag == "base":
+            continue
+        method, step = parse_arm(tag)
+        rows.append({
+            "arm": tag, "method": method, "step": step,
+            "reward_mean": res.get("reward_mean"),
+            "delta_vs_base": (None if base is None or res.get("reward_mean") is None
+                              else res["reward_mean"] - base),
+        })
+    return rows
+
+
+def gate_d_rows(rows: list[dict]) -> dict:
+    out = {}
+    for step in (50, 100):
+        cd = next((r["delta_vs_base"] for r in rows
+                   if r["method"] == "cf_dpo_mini" and r["step"] == step), None)
+        op = next((r["delta_vs_base"] for r in rows
+                   if r["method"] == "cf_opsd_static" and r["step"] == step), None)
+        if cd is None or op is None:
+            out[step] = None
+            continue
+        out[step] = {
+            "cfdpo_delta": cd, "opsd_delta": op,
+            "relative": (op / cd) if cd else None,
+            "reward_superiority": op >= 1.10 * cd,
+        }
+    return out
 
 
 def main() -> None:
@@ -35,39 +77,22 @@ def main() -> None:
             print(f"[skip] {tag}: missing {ckpt}")
             continue
         results[tag] = evaluate(heldout, ckpt, tag, run_root=OUT / tag)
-    (OUT / "pilot_eval.json").parent.mkdir(parents=True, exist_ok=True)
+    OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "pilot_eval.json").write_text(json.dumps(results, indent=1))
 
     base = results.get("base", {}).get("reward_mean")
-    rows = []
-    for tag, res in results.items():
-        if tag == "base" or base is None:
-            continue
-        rows.append({
-            "arm": tag, "reward_mean": res["reward_mean"],
-            "delta_vs_base": res["reward_mean"] - base,
-        })
-    cfdpo = {r["step"]: r for r in rows if r["arm"].startswith("cf_dpo_mini")}
-    opsd = {r["step"]: r for r in rows if r["arm"].startswith("cf_opsd_static")}
-    # gains at matched updates
-    gate_d = {}
-    for step in (50, 100):
-        cd = next((r["delta_vs_base"] for r in rows
-                   if r["arm"] == f"cf_dpo_mini_u{step}"), None)
-        op = next((r["delta_vs_base"] for r in rows
-                   if r["arm"] == f"cf_opsd_static_u{step}"), None)
-        if cd is None or op is None:
-            gate_d[step] = None
-            continue
-        gate_d[step] = {
-            "cfdpo_delta": cd, "opsd_delta": op,
-            "relative": (op / cd) if cd not in (None, 0) else None,
-            "reward_superiority": op >= 1.10 * cd,
-        }
+    rows = build_rows(results)
+    gate_d = gate_d_rows(rows)
     json.dump({"gate_d": gate_d}, (OUT / "gate_d.json").open("w"), indent=1, default=str)
 
     lines = "\n".join(
-        f"| {r['arm']} | {r['reward_mean']:+.3f} | {r['delta_vs_base']:+.3f} |" for r in rows)
+        f"| {r['arm']} | {r['reward_mean']:+.3f} | {r['delta_vs_base']:+.3f} |"
+        for r in rows if r["reward_mean"] is not None and r["delta_vs_base"] is not None)
+    gate_lines = "\n".join(
+        (f"| {s} | {v['cfdpo_delta']:+.3f} | {v['opsd_delta']:+.3f} | {v['relative']:.2f} | "
+         f"{'YES' if v['reward_superiority'] else 'NO'} |") if v else
+        f"| {s} | n/a | n/a | n/a | n/a |"
+        for s, v in gate_d.items())
     doc = f"""# CF-OPSD Pilot Results（Phase D）
 
 Held-out = {len(heldout)} cases × 8 samples；base reward = {base if base is None else f'{base:+.3f}'}。
@@ -80,11 +105,8 @@ Held-out = {len(heldout)} cases × 8 samples；base reward = {base if base is No
 
 | updates | CF-DPO Δ | CF-OPSD Δ | ratio | ≥1.10× ? |
 |---|---|---|---|---|
-""" + "\n".join(
-        f"| {s} | {gate_d[s]['cfdpo_delta']:+.3f} | {gate_d[s]['opsd_delta']:+.3f} | "
-        f"{gate_d[s]['relative']:.2f} | {'YES' if gate_d[s]['reward_superiority'] else 'NO'} |"
-        if gate_d[s] else f"| {s} | n/a | n/a | n/a | n/a |"
-        for s in (50, 100)) + "\n"
+{gate_lines}
+"""
     DOC.write_text(doc)
     print(doc)
 
