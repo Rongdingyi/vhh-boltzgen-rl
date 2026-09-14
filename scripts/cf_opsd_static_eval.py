@@ -12,8 +12,6 @@ import yaml
 ROOT = Path("/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl")
 sys.path.insert(0, str(ROOT / "src"))
 
-from vhh_rl.cf_opsd.evaluator import evaluate  # noqa: E402
-
 CFG = ROOT / "configs/cf_opsd/fixed_cases.yaml"
 OUT = ROOT / "runs/cf_opsd/pilot_eval"
 DOC = ROOT / "docs/cf_opsd/CF_OPSD_PILOT_RESULTS.md"
@@ -44,6 +42,10 @@ def build_rows(results: dict) -> list[dict]:
 
 
 def gate_d_rows(rows: list[dict]) -> dict:
+    """Gate D (§54): require positive gains on both sides (audit fix D).
+
+    reward_superiority := G_opsd > 0 and G_cfdpo > 0 and G_opsd/G_cfdpo >= 1.10
+    """
     out = {}
     for step in (50, 100):
         cd = next((r["delta_vs_base"] for r in rows
@@ -53,15 +55,19 @@ def gate_d_rows(rows: list[dict]) -> dict:
         if cd is None or op is None:
             out[step] = None
             continue
+        positive = cd > 0.0 and op > 0.0
         out[step] = {
             "cfdpo_delta": cd, "opsd_delta": op,
-            "relative": (op / cd) if cd else None,
-            "reward_superiority": op >= 1.10 * cd,
+            "relative": (op / cd) if cd > 0 else None,
+            "positive_gains": positive,
+            "reward_superiority": bool(positive and op >= 1.10 * cd),
         }
     return out
 
 
 def main() -> None:
+    from vhh_rl.cf_opsd.evaluator import evaluate  # lazy: keeps module importable without BoltzGen
+
     cfg = yaml.safe_load(CFG.read_text())
     heldout = cfg["heldout_cases"]
     arms = {

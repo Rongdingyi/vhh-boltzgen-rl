@@ -41,3 +41,19 @@ def test_build_rows_handles_missing_base():
     mod = _load()
     rows = mod.build_rows({"cf_opsd_static_u50": {"reward_mean": 2.0}})
     assert rows[0]["delta_vs_base"] is None
+
+
+def test_gate_d_requires_positive_gains():
+    """Audit fix D: two negative deltas must never count as superiority."""
+    mod = _load()
+    rows = mod.build_rows({
+        "base": {"reward_mean": 0.0},
+        "cf_dpo_mini_u50": {"reward_mean": -1.0},
+        "cf_opsd_static_u50": {"reward_mean": -1.05},
+        "cf_dpo_mini_u100": {"reward_mean": 2.0},
+        "cf_opsd_static_u100": {"reward_mean": 2.30},
+    })
+    gate = mod.gate_d_rows(rows)
+    assert gate[50]["reward_superiority"] is False
+    assert gate[50]["positive_gains"] is False
+    assert gate[100]["reward_superiority"] is True    # 2.30 >= 1.10 * 2.0

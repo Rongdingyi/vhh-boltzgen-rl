@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Phase E: on-policy EMA refresh pilot (only if Gate D passes)."""
+"""Phase E: on-policy EMA refresh pilot (only runs when Gates B/C/D pass)."""
 from __future__ import annotations
 
 import json
@@ -20,7 +20,9 @@ def main() -> None:
         case_config=ROOT / "configs/cf_opsd/fixed_cases.yaml",
         loop_config=ROOT / "configs/cf_opsd/onpolicy_v1.yaml",
         query_probe=ROOT / "runs/cf_opsd/query_probe.json",
-        target_probe=ROOT / "runs/cf_opsd/target_probe/gate_b.json",
+        gate_b_path=ROOT / "runs/cf_opsd/target_probe/gate_b.json",
+        gate_c_path=ROOT / "runs/cf_opsd/realization_probe/gate_c.json",
+        gate_d_path=ROOT / "runs/cf_opsd/pilot_eval/gate_d.json",
         output_dir=ROOT / "runs/cf_opsd/onpolicy_v1",
     )
     print(json.dumps(result, indent=1))
