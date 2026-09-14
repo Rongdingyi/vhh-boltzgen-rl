@@ -107,8 +107,12 @@ def test_onpolicy_wiring(tmp_path):
                 coords_traj=[torch.zeros(N, 3)],
                 query_states=[torch.zeros(N, 3)] * 50,
                 anchors=[torch.zeros(N, 3)] * 50,
-                feats_common={}, contains_invalid=False, fr_mismatch=0))
-        return trajs, {"case_id": cid}
+                feats_common={}, contains_invalid=False, fr_mismatch=0,
+                meta={"batch_index": i, "multiplicity": 4}))
+        contexts = {t: {"multiplicity": 4,
+                        "query": torch.zeros(4, N, 3),
+                        "anchors": torch.zeros(4, N, 3)} for t in range(50)}
+        return trajs, {"case_id": cid, "contexts": contexts}
 
     def evaluate_fn(case_ids, ckpt, tag, run_root=None):
         evaluate_calls.append(Path(ckpt))

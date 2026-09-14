@@ -7,6 +7,7 @@ same seed and require 100% identical sequences and endpoints.
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -49,6 +50,8 @@ def main() -> None:
     heldout = [cases[c] for c in cfg["heldout_cases"]]
     K = int(cfg["rollout"]["K"])
     steps = int(cfg["rollout"]["sampling_steps"])
+    cond_steps = {max(0, min(steps - 1, int(round(p * steps)) - 1))
+                  for p in cfg["query"]["candidate_progress"]} | {0}
     adapter = NativeDesignAdapter(device=0, sampling_steps=steps, diffusion_batch_size=K)
     reward = make_reward_adapter(cache_path=ROOT / "runs/cf_opsd/reward_cache.sqlite")
 
@@ -56,11 +59,13 @@ def main() -> None:
     case = train[0]
     seed = case.seed_base + SEED_OFFSET
     spec = case.structure_path.parent / "design.yaml"
+    shutil.rmtree(OUT / "_parity_ref" / case.case_id, ignore_errors=True)
     ref = adapter.generate(spec, case.case_id, OUT / "_parity_ref" / case.case_id,
                            num_designs=K, seed=seed)
     trajs, info = collect_case_rollouts(adapter, spec, case.case_id,
                                         OUT / "train" / case.case_id,
-                                        num_designs=K, seed=seed)
+                                        num_designs=K, seed=seed,
+                                        cond_steps=cond_steps)
     ref_seqs = [s.decoded_sequence for s in ref.samples]
     opsd_seqs = [t.endpoint_sequence for t in trajs]
     max_coord = max((ref.samples[i].coords - trajs[i].endpoint_coords).abs().max().item()
@@ -81,7 +86,7 @@ def main() -> None:
             spec = case.structure_path.parent / "design.yaml"
             trajs, info = collect_case_rollouts(
                 adapter, spec, case.case_id, OUT / split / case.case_id,
-                num_designs=K, seed=seed)
+                num_designs=K, seed=seed, cond_steps=cond_steps)
             # score endpoints (valid, FR-clean only)
             seqs, idx = [], []
             for i, t in enumerate(trajs):
@@ -95,7 +100,10 @@ def main() -> None:
                 for i, reward_value in zip(idx, batch.raw_scores.tolist()):
                     trajs[i].endpoint_reward = float(reward_value)
             n_reward = sum(1 for t in trajs if t.endpoint_reward is not None)
-            save_trajectories(trajs, OUT / split / case.case_id / f"seed{seed}.pt")
+            save_trajectories(trajs, OUT / split / case.case_id / f"seed{seed}.pt",
+                              contexts=info.get("contexts"),
+                              cond_kwargs=info.get("cond_kwargs"),
+                              cond_kwargs_steps=info.get("cond_kwargs_steps"))
             summary["cases"][f"{split}/{case.case_id}"] = {
                 "n": len(trajs), "n_reward": n_reward, "seed": seed,
                 "invalid": sum(1 for t in trajs if t.contains_invalid),

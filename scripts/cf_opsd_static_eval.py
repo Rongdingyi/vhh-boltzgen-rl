@@ -70,6 +70,19 @@ def main() -> None:
 
     cfg = yaml.safe_load(CFG.read_text())
     heldout = cfg["heldout_cases"]
+    present = [t for t, c in {
+        "cf_dpo_mini_u50": ROOT / "runs/cf_opsd/cf_dpo_mini/run/checkpoint_0050.pt",
+        "cf_dpo_mini_u100": ROOT / "runs/cf_opsd/cf_dpo_mini/run/checkpoint_0100.pt",
+        "cf_opsd_static_u50": ROOT / "runs/cf_opsd/static_v0/u050/checkpoint_0050.pt",
+        "cf_opsd_static_u100": ROOT / "runs/cf_opsd/static_v0/u100/checkpoint_0100.pt",
+    }.items() if c.is_file()]
+    if not present:
+        OUT.mkdir(parents=True, exist_ok=True)
+        (OUT / "STOPPED.md").write_text(
+            "# CF-OPSD Phase D evaluation\n\n无任何 CF-OPSD/CF-DPO-mini checkpoint "
+            "（Gate B FAIL，Phase C/D 未执行）→ 不评测。\n")
+        print("no method checkpoints -> Phase D eval not run (Gate B FAIL)")
+        return
     arms = {
         "base": None,
         "cf_dpo_mini_u50": ROOT / "runs/cf_opsd/cf_dpo_mini/run/checkpoint_0050.pt",

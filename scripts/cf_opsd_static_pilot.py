@@ -14,7 +14,9 @@ ROOT = Path("/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl")
 sys.path.insert(0, str(ROOT / "src"))
 
 from vhh_rl.cf_opsd.credit import pair_credit  # noqa: E402
-from vhh_rl.cf_opsd.rollout import load_trajectories  # noqa: E402
+from vhh_rl.cf_opsd.rollout import (  # noqa: E402
+    load_cond_kwargs, load_contexts, load_trajectories,
+)
 from vhh_rl.cf_opsd.static_trainer import run_static  # noqa: E402
 from vhh_rl.cf_opsd.target_builder import build_target  # noqa: E402
 from vhh_rl.cf_opsd.target_metrics import decode_and_score  # noqa: E402
@@ -55,17 +57,31 @@ def decode_seq(coords, feats):
 def main() -> None:
     cfg = yaml.safe_load(CFG.read_text())
     q_star = float(json.loads((ROOT / "runs/cf_opsd/query_probe.json").read_text())["q_star_progress"])
+
     gate_b = json.loads((ROOT / "runs/cf_opsd/target_probe/gate_b.json").read_text())
+    if gate_b.get("selected_radius") is None:
+        OUT.mkdir(parents=True, exist_ok=True)
+        (OUT / "STOPPED.md").write_text(
+            "# CF-OPSD Static Pilot（Phase D）\n\nGate B FAIL（无通过半径）→ "
+            "按任务书 §46（Gate C 未过不得进入 Phase D）停止。\n")
+        print("Gate B FAIL -> Phase D not run (task book §46)")
+        return
     radius = float(gate_b["selected_radius"])
     variant = "target_mask_only"
     cases = load_cases()
     scorer = make_reward_adapter(cache_path=ROOT / "runs/cf_opsd/reward_cache.sqlite")
 
     targets = []
+    cond_kwargs_by_case = {}
     for cid in cfg["train_cases"]:
         case = cases[cid]
         seed = case.seed_base + 800000
-        trajs = [t for t in load_trajectories(ROLL / "train" / cid / f"seed{seed}.pt")
+        traj_path = ROLL / "train" / cid / f"seed{seed}.pt"
+        all_trajs = sorted(load_trajectories(traj_path), key=lambda t: t.sample_index)
+        contexts = load_contexts(traj_path)
+        cond_kwargs_by_case[cid] = load_cond_kwargs(traj_path)
+        mult = int(contexts[0]["multiplicity"]) if contexts else 1
+        trajs = [t for t in all_trajs
                  if t.endpoint_reward is not None and not t.contains_invalid and t.fr_mismatch == 0]
         ranked = sorted(trajs, key=lambda t: t.endpoint_reward, reverse=True)
         n_steps = len(ranked[0].sigmas)
@@ -93,6 +109,9 @@ def main() -> None:
                 "case_id": cid, "pair_index": pi,
                 "query_index": step, "query_progress": q_star,
                 "sigma": loser.sigmas[step],
+                "full_query_coords": contexts[step]["query"],
+                "full_anchor_coords": contexts[step]["anchors"],
+                "design_index": int(loser.meta.get("batch_index", 0)), "multiplicity": mult,
                 "query_coords": loser.query_states[step],
                 "anchor_coords": anchor,
                 "winner_coords": winner.endpoint_coords,
@@ -112,6 +131,7 @@ def main() -> None:
                   f"{None if target_reward is None else target_reward - anchor_reward:+.3f}")
     scorer.close()
     OUT.mkdir(parents=True, exist_ok=True)
+    torch.save(cond_kwargs_by_case, OUT / "cond_kwargs.pt")
     torch.save(targets, OUT / "targets_static.pt")
     summary = {"n_targets": len(targets), "radius": radius, "q_star": q_star,
                "variant": variant}

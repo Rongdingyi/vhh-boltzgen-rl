@@ -1,5 +1,11 @@
 """Phase C: same-query finite realization (task book §35-§45).
 
+NOTE: callers must run with the design CLI's matmul precision
+(``torch.set_float32_matmul_precision("high")``) or the same-query forward will
+not reproduce the stored anchor (TF32 vs FP32 differ by ~3e-3 relative).
+``sigma`` must also be batch-shaped (``torch.full((B,), s)``), exactly as the
+sampler expands its scalar; shape-[1] sigma takes a different TF32 kernel path.
+
 Student clean prediction P_theta(X_q, sigma_q) is trained towards the positive
 target Y+ on the target mask (V0-A) and optionally with a weak hold term over
 the remaining resolved atoms towards the behavior anchor (V0-B).

@@ -18,7 +18,9 @@ def progress_to_step(progress: float, n_steps: int) -> int:
 
 
 def decode_anchor(traj: OPSDTrajectory, step: int) -> tuple[str, bool]:
-    feats = {k: (v.clone() if torch.is_tensor(v) else v) for k, v in traj.feats_common.items()}
+    from .target_metrics import _squeeze_feats
+    feats = {k: (v.clone() if torch.is_tensor(v) else v)
+             for k, v in _squeeze_feats(traj.feats_common).items()}
     feats["coords"] = traj.anchors[step].clone()
     out = decode_atom14(feats)
     seq, _tokens, invalid = sequence_from_feat(out)

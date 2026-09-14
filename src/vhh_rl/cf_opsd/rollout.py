@@ -26,6 +26,19 @@ POOL = ROOT / "runs/native_pool"
 OUT = ROOT / "runs/cf_opsd/rollouts"
 
 
+def cpu_serializable(value):
+    """CPU clone of tensors / dicts / functools.partial (same format as
+    native_atom14.adapter.capture_conditioning)."""
+    if torch.is_tensor(value):
+        return value.detach().cpu().clone()
+    if isinstance(value, dict):
+        return {k: cpu_serializable(v) for k, v in value.items()}
+    if callable(value) and hasattr(value, "keywords") and hasattr(value, "func"):
+        return {"__partial__": True, "func": value.func.__name__,
+                "keywords": {k: cpu_serializable(v) for k, v in value.keywords.items()}}
+    return value
+
+
 def collect_case_rollouts(
     adapter: NativeDesignAdapter,
     spec_path: str | Path,
@@ -33,6 +46,7 @@ def collect_case_rollouts(
     run_root: str | Path,
     num_designs: int,
     seed: int,
+    cond_steps: set[int] | None = None,
 ) -> tuple[list[OPSDTrajectory], dict]:
     """Run the official design pipeline once and capture exact OPSD data.
 
@@ -47,6 +61,9 @@ def collect_case_rollouts(
     adapter.num_designs = int(num_designs)
     raw_writer: list[dict] = []
     net_calls: list[dict] = []
+    cond_kwargs: dict = {}
+    cond_kwargs_steps: dict[int, dict] = {}
+    cond_steps = set(cond_steps) if cond_steps else {0}
     schedule: dict = {}
 
     original_decode = writer_module.res_from_atom14
@@ -93,7 +110,22 @@ def collect_case_rollouts(
         out = original_fwd(diff_self, noised_atom_coords, sigma,
                            network_condition_kwargs, training=training, **kw)
         denoised = out[0] if isinstance(out, tuple) else out
+        step_idx = len(net_calls)
+        if step_idx in cond_steps:
+            captured = {}
+            for key in ("s_inputs", "s_trunk", "feats", "diffusion_conditioning"):
+                if key in network_condition_kwargs:
+                    captured[key] = cpu_serializable(network_condition_kwargs[key])
+            captured["multiplicity"] = int(network_condition_kwargs.get("multiplicity", 1))
+            cond_kwargs_steps[step_idx] = captured
+        if not cond_kwargs:
+            for key in ("s_inputs", "s_trunk", "feats", "diffusion_conditioning"):
+                if key in network_condition_kwargs:
+                    cond_kwargs[key] = cpu_serializable(network_condition_kwargs[key])
+            cond_kwargs["multiplicity"] = int(network_condition_kwargs.get("multiplicity", 1))
         net_calls.append({
+            "call_index": len(net_calls),
+            "multiplicity": int(network_condition_kwargs.get("multiplicity", 1)),
             "noisy": noised_atom_coords.detach().float().cpu().clone(),
             "sigma": sigma.detach().float().cpu().clone()
             if torch.is_tensor(sigma) else torch.tensor([float(sigma)]),
@@ -128,19 +160,25 @@ def collect_case_rollouts(
         AtomDiffusion.sample = original_sample
         AtomDiffusion.preconditioned_network_forward = original_fwd
 
-    # match writer samples to sampler batch indices via final coords
-    finals = schedule["sample_atom_coords"]
+    # match writer samples to batch elements via final coords
+    finals_all = schedule["sample_atom_coords"]
     matches = []
     for w_idx, raw in enumerate(raw_writer):
         best = None
-        for b_idx in range(finals.shape[0]):
-            diff = (finals[b_idx] - raw["coords"]).abs().max().item()
+        for b_idx in range(finals_all.shape[0]):
+            diff = (finals_all[b_idx] - raw["coords"]).abs().max().item()
             if best is None or diff < best[0]:
                 best = (diff, b_idx)
         if best is None or best[0] > 1e-3:
             raise RuntimeError(f"{case_id}: writer sample {w_idx} unmatched ({best})")
         matches.append(best[1])
 
+    # one network call per denoising step; context = that call's full batch
+    contexts = {
+        t: {"multiplicity": call["multiplicity"],
+            "query": call["noisy"], "anchors": call["denoised"]}
+        for t, call in enumerate(net_calls)
+    }
     trajectories = []
     for i, raw in enumerate(raw_writer):
         b = matches[i]
@@ -157,24 +195,56 @@ def collect_case_rollouts(
             anchors=[c["denoised"][b] for c in net_calls],
             feats_common=raw["common"],
             contains_invalid=raw["contains_invalid"],
+            meta={"batch_index": b,
+                  "multiplicity": int(net_calls[0]["multiplicity"]) if net_calls else 1},
         ))
     info = {
         "case_id": case_id,
         "seed": int(seed),
+        "contexts": contexts,
+        "cond_kwargs": cond_kwargs,
+        "cond_kwargs_steps": cond_kwargs_steps,
         "n_designs": len(raw_writer),
         "elapsed_seconds": time.time() - started,
         "n_net_calls": len(net_calls),
+        "multiplicity": int(net_calls[0]["multiplicity"]) if net_calls else 1,
         "schedule": {k: v for k, v in schedule.items() if k not in ("coords_traj", "x0_coords_traj", "sample_atom_coords")},
         "matches": matches,
     }
     return trajectories, info
 
 
-def save_trajectories(trajectories: list[OPSDTrajectory], path: Path) -> None:
+def save_trajectories(trajectories: list[OPSDTrajectory], path: Path,
+                      contexts: dict | None = None,
+                      cond_kwargs: dict | None = None,
+                      cond_kwargs_steps: dict | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    torch.save([t.__dict__ for t in trajectories], path)
+    payload = {"trajectories": [t.__dict__ for t in trajectories],
+               "contexts": contexts or {},
+               "cond_kwargs": cond_kwargs or {},
+               "cond_kwargs_steps": cond_kwargs_steps or {}}
+    torch.save(payload, path)
 
 
 def load_trajectories(path: Path) -> list[OPSDTrajectory]:
     rows = torch.load(path, map_location="cpu", weights_only=False)
+    if isinstance(rows, dict):
+        rows = rows["trajectories"]
     return [OPSDTrajectory(**r) for r in rows]
+
+
+def load_contexts(path: Path) -> dict:
+    rows = torch.load(path, map_location="cpu", weights_only=False)
+    if isinstance(rows, dict):
+        return rows.get("contexts", {})
+    return {}
+
+
+def load_cond_kwargs(path: Path, step: int | None = None) -> dict:
+    rows = torch.load(path, map_location="cpu", weights_only=False)
+    if not isinstance(rows, dict):
+        return {}
+    steps = rows.get("cond_kwargs_steps", {})
+    if step is not None and step in steps:
+        return steps[step]
+    return rows.get("cond_kwargs", {})

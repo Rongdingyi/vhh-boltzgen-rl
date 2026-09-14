@@ -61,3 +61,10 @@ def test_run_onpolicy_refuses_before_model_work(tmp_path):
                      gate_d_path=g["gate_d"], output_dir=tmp_path / "out",
                      deps={"load_base": boom, "adapter_factory": boom})
     assert called["n"] == 0
+
+
+def test_check_gates_missing_file(tmp_path):
+    """Missing gate artifact must refuse with a clear RuntimeError."""
+    g = _write_gates(tmp_path, radius=0.5, gate_c_pass=True, gate_d_pass=True)
+    with pytest.raises(RuntimeError, match="artifact missing"):
+        check_gates(g["gate_b"], tmp_path / "missing_gate_c.json", g["gate_d"])

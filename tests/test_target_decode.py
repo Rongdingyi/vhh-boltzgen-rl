@@ -18,7 +18,8 @@ def test_target_decode_fr_preserved():
     from vhh_rl.native_atom14.dpo_trainer import load_conditioning
 
     cond = load_conditioning(POOL / "conditioning", "sab2_6u52_c")
-    feats = cond["feats"]
+    from vhh_rl.cf_opsd.target_metrics import _squeeze_feats
+    feats = _squeeze_feats(cond["feats"])
     coords = torch.load(sorted((POOL / "train/sab2_6u52_c/coords").glob("*.pt"))[0],
                         map_location="cpu", weights_only=True).float()
     bt = build_target(coords, coords + 0.3, feats, [25, 26], {25: 1.0, 26: 1.0}, 0.5)

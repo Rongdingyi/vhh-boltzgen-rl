@@ -8,10 +8,22 @@ import torch
 from ..native_atom14.decode import decode_atom14, fr_check, sequence_from_feat
 
 
+def _squeeze_feats(feats: dict) -> dict:
+    """Drop leading singleton batch dims so the unbatched decoder accepts feats."""
+    out = {}
+    for k, v in feats.items():
+        if torch.is_tensor(v):
+            while v.dim() > 1 and v.shape[0] == 1:
+                v = v.squeeze(0)
+        out[k] = v
+    return out
+
+
 def decode_and_score(target_coords: torch.Tensor, feats: dict, reference_sequence: str,
                      fr_positions, scorer, case, endpoint_reward: float,
                      anchor_reward: float, design_positions) -> dict:
-    feat = {k: (v.clone() if torch.is_tensor(v) else v) for k, v in feats.items()}
+    feat = {k: (v.clone() if torch.is_tensor(v) else v)
+            for k, v in _squeeze_feats(feats).items()}
     feat["coords"] = target_coords.clone()
     out = decode_atom14(feat)
     seq, _tokens, invalid = sequence_from_feat(out)

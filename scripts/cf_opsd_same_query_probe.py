@@ -40,6 +40,16 @@ def decode_seq(coords, feats):
 
 
 def main() -> None:
+
+    gate_b_path = ROOT / "runs/cf_opsd/target_probe/gate_b.json"
+    if gate_b_path.is_file():
+        _gb = json.loads(gate_b_path.read_text())
+        if _gb.get("selected_radius") is None:
+            OUT.mkdir(parents=True, exist_ok=True)
+            DOC.write_text("# CF-OPSD Realization Probe（Phase C）\n\n"
+                           "Gate B FAIL（无通过半径）→ 按任务书 §32/§95 停止，Phase C 不执行。\n")
+            print("Gate B FAIL -> Phase C not run (task book §32)")
+            return
     targets = torch.load(TARGETS, map_location="cpu", weights_only=False)
     targets = [t for t in targets if t["control"] == "cf"]
     if not targets:

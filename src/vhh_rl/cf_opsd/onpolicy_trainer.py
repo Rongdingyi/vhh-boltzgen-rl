@@ -147,9 +147,14 @@ def default_deps() -> dict:
 
 def check_gates(gate_b_path: Path, gate_c_path: Path, gate_d_path: Path) -> dict:
     """Hard-check Gate B/C/D artifacts; refuse to run otherwise (audit fix C)."""
-    gate_b = json.loads(Path(gate_b_path).read_text())
-    gate_c = json.loads(Path(gate_c_path).read_text())
-    gate_d = json.loads(Path(gate_d_path).read_text())
+    paths = {"Gate B": Path(gate_b_path), "Gate C": Path(gate_c_path),
+             "Gate D": Path(gate_d_path)}
+    for name, path in paths.items():
+        if not path.is_file():
+            raise RuntimeError(f"{name} artifact missing ({path}) -> refusing Phase E")
+    gate_b = json.loads(paths["Gate B"].read_text())
+    gate_c = json.loads(paths["Gate C"].read_text())
+    gate_d = json.loads(paths["Gate D"].read_text())
     if gate_b.get("selected_radius") is None:
         raise RuntimeError("Gate B not passed (no selected radius) -> refusing Phase E")
     if not any(gate_c.get("gate_c", {}).values()):
@@ -185,6 +190,7 @@ def run_onpolicy(base_checkpoint: Path, case_config: Path, loop_config: Path,
 
     deps = {**default_deps(), **(deps or {})}
     torch.manual_seed(seed)
+    torch.set_float32_matmul_precision("high")  # sampling context used TF32
     base = deps["load_base"](base_checkpoint, device=DEVICE)
     student, _ref = deps["make_policy_ref"](base, device=DEVICE)
     behavior = copy.deepcopy(base)          # independent copy (audit fix)
@@ -201,9 +207,10 @@ def run_onpolicy(base_checkpoint: Path, case_config: Path, loop_config: Path,
     scorer = deps["scorer_factory"]()
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    conditionings = {cid: deps["move_cond"](deps["load_cond"](
-        ROOT / "runs/native_pool/conditioning", cid), device=DEVICE)
-        for cid in train_cases}
+    conditionings: dict[str, dict] = {}
+    for cid in train_cases:  # legacy cache; overridden by exact rollout kwargs
+        conditionings[cid] = deps["move_cond"](deps["load_cond"](
+            ROOT / "runs/native_pool/conditioning", cid), device=DEVICE)
 
     history = []
     queries_cumulative = 0
@@ -214,7 +221,7 @@ def run_onpolicy(base_checkpoint: Path, case_config: Path, loop_config: Path,
         for cid in train_cases:
             case = cases[cid]
             seed_r = seed * 100 + outer
-            trajectories, _info = deps["rollout_fn"](
+            trajectories, rollout_info = deps["rollout_fn"](
                 adapter, case.structure_path.parent / "design.yaml", cid,
                 output_dir / f"rollout_r{outer}" / cid, num_designs=K, seed=seed_r)
             seqs, slots = [], []
@@ -234,6 +241,13 @@ def run_onpolicy(base_checkpoint: Path, case_config: Path, loop_config: Path,
                 continue
             n_steps = len(ranked[0].sigmas)
             step = max(0, min(n_steps - 1, int(round(q_star * n_steps)) - 1))
+            if rollout_info.get("cond_kwargs"):
+                conditionings[cid] = deps["move_cond"](rollout_info["cond_kwargs"],
+                                                       device=DEVICE)
+            contexts = rollout_info.get("contexts", {})
+            mult = int(contexts[step]["multiplicity"]) if contexts else 1
+            full_query = contexts[step]["query"] if contexts else loser.query_states[step].unsqueeze(0)
+            full_anchor = contexts[step]["anchors"] if contexts else loser.anchors[step].unsqueeze(0)
             for pi in range(n_use):
                 winner, loser = ranked[pi], ranked[-1 - pi]   # rank1-vs-rank8, rank2-vs-rank7
                 credit = deps["credit_fn"](scorer, case, f"{cid}_w{pi}", f"{cid}_l{pi}",
@@ -250,6 +264,8 @@ def run_onpolicy(base_checkpoint: Path, case_config: Path, loop_config: Path,
                     "anchor": anchor, "target": bt.target_coords, "touched": bt.touched,
                     "credits": credit["credits"],
                     "query": loser.query_states[step], "sigma": loser.sigmas[step],
+                    "full_query": full_query, "full_anchor": full_anchor,
+                    "design_index": int(loser.meta.get("batch_index", 0)), "multiplicity": mult,
                     "behavior_reward": winner.endpoint_reward,
                 })
         if not round_targets:
@@ -260,11 +276,13 @@ def run_onpolicy(base_checkpoint: Path, case_config: Path, loop_config: Path,
             rec = round_targets[step_i % len(round_targets)]
             cond = conditionings[rec["case_id"]]
             kwargs = {"s_inputs": cond["s_inputs"], "s_trunk": cond["s_trunk"],
-                      "feats": cond["feats"], "multiplicity": 1,
+                      "feats": cond["feats"], "multiplicity": rec["multiplicity"],
                       "diffusion_conditioning": cond["diffusion_conditioning"]}
-            q = rec["query"].to(DEVICE).float().unsqueeze(0)
-            sigma = torch.tensor([float(rec["sigma"])], device=DEVICE)
-            target = rec["target"].to(DEVICE).float().unsqueeze(0)
+            q = rec["full_query"].to(DEVICE).float().unsqueeze(0)   # [1, B, N, 3]
+            b_idx = rec["design_index"]
+            sigma = torch.full((q.shape[1],), float(rec["sigma"]), device=DEVICE)
+            target = rec["target"].to(DEVICE).float()
+            anchor_b = rec["full_anchor"].to(DEVICE).float()[b_idx]
             feats = cond["feats"]
             pad = feats["atom_pad_mask"].reshape(-1).bool()
             fake = feats["fake_atom_mask"].reshape(-1).bool()
@@ -279,14 +297,13 @@ def run_onpolicy(base_checkpoint: Path, case_config: Path, loop_config: Path,
             optimizer.zero_grad(set_to_none=True)
             denoised, _ = student.structure_module.preconditioned_network_forward(
                 q, sigma, training=False, network_condition_kwargs=kwargs)
-            denoised = denoised.float()
-            loss = ((denoised - target) ** 2)[:, mask, :].sum(dim=-1).mean()
+            pred = denoised.float()[0, b_idx]
+            loss = ((pred - target) ** 2)[mask, :].sum(dim=-1).mean()
             if variant == "target_mask_weak_hold":
                 resolved = feats["atom_resolved_mask"].reshape(-1).bool()
                 hold_mask = (pad & resolved & ~mask).to(DEVICE)
                 if hold_mask.any():
-                    anchor_t = rec["anchor"].to(DEVICE).float().unsqueeze(0)
-                    hold = ((denoised - anchor_t) ** 2)[:, hold_mask, :].sum(dim=-1).mean()
+                    hold = ((pred - anchor_b) ** 2)[hold_mask, :].sum(dim=-1).mean()
                     loss = loss + hold_lambda * hold
             loss.backward()
             torch.nn.utils.clip_grad_norm_(params, max_grad_norm)

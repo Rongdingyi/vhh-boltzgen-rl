@@ -21,7 +21,9 @@ ROOT = Path("/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl")
 sys.path.insert(0, str(ROOT / "src"))
 
 from vhh_rl.cf_opsd.credit import pair_credit  # noqa: E402
-from vhh_rl.cf_opsd.rollout import load_trajectories  # noqa: E402
+from vhh_rl.cf_opsd.rollout import (  # noqa: E402
+    load_cond_kwargs, load_contexts, load_trajectories,
+)
 from vhh_rl.cf_opsd.target_builder import build_target  # noqa: E402
 from vhh_rl.cf_opsd.target_metrics import (  # noqa: E402
     credit_match_rate, decode_and_score, third_aa_rate,
@@ -76,10 +78,16 @@ def main() -> None:
 
     rows = []
     targets_store = []
+    cond_kwargs_by_case = {}
     for cid in cfg["train_cases"]:
         case = cases[cid]
         seed = case.seed_base + 800000
-        trajs = [t for t in load_trajectories(ROLL / "train" / cid / f"seed{seed}.pt")
+        traj_path = ROLL / "train" / cid / f"seed{seed}.pt"
+        all_trajs = sorted(load_trajectories(traj_path), key=lambda t: t.sample_index)
+        contexts = load_contexts(traj_path)
+        cond_kwargs_by_case[cid] = load_cond_kwargs(traj_path)
+        mult = int(contexts[0]["multiplicity"]) if contexts else 1
+        trajs = [t for t in all_trajs
                  if t.endpoint_reward is not None and not t.contains_invalid and t.fr_mismatch == 0]
         ranked = sorted(trajs, key=lambda t: t.endpoint_reward, reverse=True)
         winner, loser = ranked[0], ranked[-1]
@@ -130,6 +138,9 @@ def main() -> None:
                 "case_id": cid, "control": "cf", "radius": radius,
                 "query_index": step, "query_progress": q_star,
                 "sigma": loser.sigmas[step],
+                "full_query_coords": contexts[step]["query"],
+                "full_anchor_coords": contexts[step]["anchors"],
+                "design_index": int(loser.meta.get("batch_index", 0)), "multiplicity": mult,
                 "query_coords": loser.query_states[step],
                 "anchor_coords": anchor,
                 "winner_coords": winner.endpoint_coords,
@@ -223,14 +234,13 @@ def main() -> None:
     scorer.close()
 
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "targets.pt").write_bytes(b"")  # placeholder replaced below
+    torch.save(cond_kwargs_by_case, OUT / "cond_kwargs.pt")
     torch.save(targets_store, OUT / "targets.pt")
     with (OUT / "target_sequences.jsonl").open("w") as fh:
         for t in targets_store:
-            fh.write(json.dumps({k: v for k, v in t.items()
-                                 if k not in ("query_coords", "anchor_coords",
-                                              "winner_coords", "loser_coords",
-                                              "target_coords", "feats_common")}) + "\n")
+            row = {k: v for k, v in t.items()
+                   if not torch.is_tensor(v) and k != "feats_common"}
+            fh.write(json.dumps(row) + "\n")
     with (OUT / "target_metrics.csv").open("w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
         w.writeheader()
@@ -251,12 +261,18 @@ def main() -> None:
     print(json.dumps(summary, indent=1, default=str))
 
     # doc
+    def fmt(v, spec="+.3f"):
+        return "n/a" if v is None else format(v, spec)
+
     radius_table = "\n".join(
-        f"| {r['radius']} | {r['median_target_minus_anchor']:+.3f} | {r['positive_cases']}/4 | "
-        f"{r['median_credit_match']:.2f} | {r['invalid_rate']:.2f} | {r['fr_mismatch_total']} | "
-        f"{'PASS' if gate[r['radius']] else 'FAIL'} |" for r in radius_rows)
+        f"| {r['radius']} | {fmt(r['median_target_minus_anchor'])} | {r['positive_cases']}/4 | "
+        f"{fmt(r['median_credit_match'], '.2f')} | {r['invalid_rate']:.2f} | "
+        f"{r['fr_mismatch_total']} | {'PASS' if gate[r['radius']] else 'FAIL'} |"
+        for r in radius_rows)
     control_table = "\n".join(
-        f"| {r['control']} | {r['target_minus_anchor']:+.3f} | {r['credit_match']:.2f} |"
+        f"| {r['control']} | "
+        f"{'n/a' if r['target_minus_anchor'] is None else format(r['target_minus_anchor'], '+.3f')} | "
+        f"{'n/a' if r['credit_match'] is None else format(r['credit_match'], '.2f')} |"
         for r in control_rows) if control_rows else ""
     section = f"""## Target construction（q* = {q_star:.0%}）
 

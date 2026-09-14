@@ -12,7 +12,7 @@ from ..native_atom14.checkpoint import (
     load_base_model, make_policy_reference, parameter_drift,
     save_native_checkpoint, trainable_score_params,
 )
-from ..native_atom14.dpo_trainer import load_conditioning, move_conditioning
+from ..native_atom14.dpo_trainer import move_conditioning
 from .same_query_fit import fit_steps
 
 DEVICE = "cuda"
@@ -24,11 +24,15 @@ def run_static(name: str, targets_path: Path, conditioning_dir: Path, base_check
                seed: int = 20260914, log_tag: str = "cf_opsd_static") -> dict:
     random.seed(seed)
     torch.manual_seed(seed)
+    torch.set_float32_matmul_precision("high")  # sampling context used TF32
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     targets = torch.load(targets_path, map_location="cpu", weights_only=False)
     if not targets:
         raise RuntimeError("empty static target set")
+    cond_path = Path(targets_path).parent / "cond_kwargs.pt"
+    cond_kwargs = (torch.load(cond_path, map_location="cpu", weights_only=False)
+                   if cond_path.is_file() else {})
 
     base = load_base_model(base_checkpoint, device=DEVICE)
     student, reference = make_policy_reference(base, device=DEVICE)
@@ -43,15 +47,27 @@ def run_static(name: str, targets_path: Path, conditioning_dir: Path, base_check
         rec = random.choice(targets)
         cid = rec["case_id"]
         if cid not in cond_cache:
-            cond_cache[cid] = move_conditioning(load_conditioning(conditioning_dir, cid))
+            if cid in cond_kwargs:
+                cond_cache[cid] = move_conditioning(cond_kwargs[cid])
+            else:  # legacy fallback: round-1 conditioning cache
+                from ..native_atom14.dpo_trainer import load_conditioning
+                cond_cache[cid] = move_conditioning(load_conditioning(conditioning_dir, cid))
         cond = cond_cache[cid]
         kwargs = {"s_inputs": cond["s_inputs"], "s_trunk": cond["s_trunk"],
-                  "feats": cond["feats"], "multiplicity": 1,
+                  "feats": cond["feats"], "multiplicity": mult,
                   "diffusion_conditioning": cond["diffusion_conditioning"]}
-        query = rec["query_coords"].to(DEVICE).float().unsqueeze(0)
-        sigma = torch.tensor([float(rec["sigma"])], device=DEVICE)
-        target = rec["target_coords"].to(DEVICE).float().unsqueeze(0)
-        anchor = rec["anchor_coords"].to(DEVICE).float().unsqueeze(0)
+        full_query = rec.get("full_query_coords", rec["query_coords"]).to(DEVICE).float()
+        if full_query.dim() == 2:
+            full_query = full_query.unsqueeze(0)
+        query = full_query.unsqueeze(0)                      # [1, B, N, 3]
+        mult = int(rec.get("multiplicity", query.shape[1]))
+        design_index = int(rec.get("design_index", 0))
+        sigma = torch.full((query.shape[1],), float(rec["sigma"]), device=DEVICE)
+        target = rec["target_coords"].to(DEVICE).float()
+        full_anchor = rec.get("full_anchor_coords", rec["anchor_coords"]).to(DEVICE).float()
+        if full_anchor.dim() == 2:
+            full_anchor = full_anchor.unsqueeze(0)
+        anchor = full_anchor[design_index]                   # [N, 3]
         feats = cond["feats"]
         token_of_atom = feats["atom_to_token"]
         if token_of_atom.dim() == 3:
@@ -70,12 +86,12 @@ def run_static(name: str, targets_path: Path, conditioning_dir: Path, base_check
         optimizer.zero_grad(set_to_none=True)
         denoised, _ = student.structure_module.preconditioned_network_forward(
             query, sigma, training=False, network_condition_kwargs=kwargs)
-        denoised = denoised.float()
-        diff = (denoised - target) ** 2
-        loss = diff[:, target_mask, :].sum(dim=-1).mean()
+        pred = denoised.float()[0, design_index]             # [N, 3]
+        diff = (pred - target) ** 2
+        loss = diff[target_mask, :].sum(dim=-1).mean()
         hold_value = torch.zeros((), device=DEVICE)
         if variant == "target_mask_weak_hold" and hold_mask.any():
-            hold_value = ((denoised - anchor) ** 2)[:, hold_mask, :].sum(dim=-1).mean()
+            hold_value = ((pred - anchor) ** 2)[hold_mask, :].sum(dim=-1).mean()
             loss = loss + hold_lambda * hold_value
         loss.backward()
         grad_norm = torch.nn.utils.clip_grad_norm_(params, 1.0)
