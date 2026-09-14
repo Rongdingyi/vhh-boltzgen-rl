@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 import torch
 
-ROOT = Path("/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl")
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from vhh_rl.native_atom14.checkpoint import load_base_model  # noqa: E402

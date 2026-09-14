@@ -6,7 +6,7 @@ from pathlib import Path
 
 import torch
 
-ROOT = Path("/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl")
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from vhh_rl.native_atom14.paired_noise import paired_noising  # noqa: E402

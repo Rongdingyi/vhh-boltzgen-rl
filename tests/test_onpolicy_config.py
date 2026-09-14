@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-ROOT = Path("/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl")
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from vhh_rl.cf_opsd.onpolicy_trainer import REQUIRED_KEYS, _require  # noqa: E402

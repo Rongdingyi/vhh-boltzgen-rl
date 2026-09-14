@@ -19,7 +19,7 @@ from types import SimpleNamespace
 import torch
 import yaml
 
-ROOT = Path("/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl")
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 

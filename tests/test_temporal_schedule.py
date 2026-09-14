@@ -5,7 +5,7 @@ import math
 import sys
 from pathlib import Path
 
-ROOT = Path("/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl")
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from vhh_rl.credit.temporal_schedule import g_hard, g_smooth  # noqa: E402

@@ -5,7 +5,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-ROOT = Path("/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl")
+ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/cf_opsd_static_eval.py"
 
 
