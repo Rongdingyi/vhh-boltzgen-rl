@@ -13,5 +13,6 @@ export PYTHONPATH="$ROOT/src:/share/home/rongdingyi/programs/proteingen/boltzgen
 export HF_HUB_OFFLINE=1 LAYERNORM_TYPE=torch CUBLAS_WORKSPACE_CONFIG=:4096:8
 PY=/share/home/rongdingyi/.conda/envs/vhh-guidance/bin/python
 CKPT=${CKPT:-}
+NSIGMA=${NSIGMA:-32}
 if [ -n "$CKPT" ]; then EXTRA="--ckpt $CKPT"; else EXTRA=""; fi
-$PY -u "$ROOT/experiments/cf_dpo_v2/scripts/proxy_validation.py" $EXTRA
+$PY -u "$ROOT/experiments/cf_dpo_v2/scripts/proxy_validation.py" $EXTRA --n-sigma "$NSIGMA"

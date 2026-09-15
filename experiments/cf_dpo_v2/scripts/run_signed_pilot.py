@@ -26,6 +26,7 @@ def main() -> None:
 
     out_dir = OUT / f"{args.variant}_u{args.updates}"
     if not args.eval_only:
+        shutil.rmtree(out_dir, ignore_errors=True)  # no mixed old/new logs
         from vhh_rl.cf_dpo_v2.signed_trainer import run_signed
 
         summary = run_signed(BASE, GRAPH, out_dir, variant=args.variant, tau=args.tau,

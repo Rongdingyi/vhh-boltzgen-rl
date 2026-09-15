@@ -30,7 +30,7 @@ POOL = ROOT / "runs/native_pool"
 CF = ROOT / "runs/next_stage/counterfactual"
 
 
-from .types import Edge, Graph, Node  # noqa: F401  (re-exported for callers)
+from .types import Edge, Graph, Node, check_edge_consistency  # noqa: F401
 
 
 def classify(drop: float, gain: float, tol: float = 0.05) -> str:
@@ -183,6 +183,7 @@ def build_graph(case_ids: list[str], *, sites_per_pair: int = 3,
 
 
 def save_graph(graph: Graph, path: str | Path) -> None:
+    check_edge_consistency(graph)  # production invariant, not test-only
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "nodes": {k: {"node_id": n.node_id, "case_id": n.case_id,

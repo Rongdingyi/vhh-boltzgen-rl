@@ -77,7 +77,8 @@ def run_signed(base_checkpoint: str | Path, graph_path: str | Path,
                max_grad_norm: float = 1.0, checkpoint_every: int = 50,
                same_seq_ratio: float = 0.25, seed: int = 20260914,
                conditioning_dir: str | Path | None = None,
-               n_sigma: int = 3, calib_steps: int = 10, target_h_std: float = 1.0,
+               n_sigma: int = 3, pre_calibrate: bool = True,
+               n_calib_edges: int = 32, target_h_std: float = 1.0,
                log_tag: str = "cfd2") -> dict:
     torch.manual_seed(seed)
     torch.set_float32_matmul_precision("high")  # match native sampling context
@@ -98,10 +99,55 @@ def run_signed(base_checkpoint: str | Path, graph_path: str | Path,
     cond_cache: dict[str, dict] = {}
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    # ---- kappa pre-calibration: no policy updates, fixed edge batch --------
+    kappa_eff = kappa
+    if pre_calibrate:
+        import statistics as _st
+        calib_rng = random.Random(seed)
+        calib_edges = list(edges)
+        calib_rng.shuffle(calib_edges)
+        calib_edges = calib_edges[: max(1, n_calib_edges)]
+        calib_h: list[float] = []
+        for edge in calib_edges:
+            node_a, node_b = nodes[edge["a"]], nodes[edge["b"]]
+            cid = node_a["case_id"]
+            if cid not in cond_cache:
+                cond = None
+                rollout_dir = ROOT / "runs/cf_opsd/rollouts/train" / cid
+                candidates = sorted(rollout_dir.glob("seed*.pt")) if rollout_dir.is_dir() else []
+                if candidates:
+                    payload = torch.load(candidates[0], map_location="cpu", weights_only=False)
+                    cond = payload.get("cond_kwargs") if isinstance(payload, dict) else None
+                if cond:
+                    cond_cache[cid] = move_conditioning(cond, device=DEVICE)
+                elif cond_dir is not None:
+                    cond_cache[cid] = move_conditioning(
+                        load_conditioning(cond_dir, cid), device=DEVICE)
+                else:
+                    raise FileNotFoundError(f"no conditioning for {cid}")
+            cond = cond_cache[cid]
+            feats_c = cond["feats"]
+            kwargs_c = {"s_inputs": cond["s_inputs"], "s_trunk": cond["s_trunk"],
+                        "feats": feats_c, "multiplicity": 1,
+                        "diffusion_conditioning": cond["diffusion_conditioning"]}
+            coords_a = node_a["coords"].to(DEVICE).float()
+            coords_b = node_b["coords"].to(DEVICE).float()
+            with torch.no_grad():
+                for _draw in range(max(1, n_sigma)):
+                    sigma = policy.structure_module.noise_distribution(1)
+                    noise = torch.randn_like(coords_a.unsqueeze(0))
+                    _z, info = edge_loss(
+                        policy.structure_module, reference.structure_module, feats_c,
+                        coords_a, coords_b, sigma, noise, kwargs_c, tau=tau,
+                        kappa=1.0, require_grad=False)
+                    calib_h.extend([info["h_a"], info["h_b"]])
+        emp_std = _st.stdev(calib_h) if len(calib_h) > 1 else 1e-8
+        kappa_eff = kappa * (target_h_std / (emp_std or 1e-8))
+        print(f"[{log_tag}] pre-calibrated kappa on {len(calib_edges)} fixed edges: "
+              f"emp_std={emp_std:.3e} -> kappa_eff={kappa_eff:.3e}", flush=True)
+
     history = []
     t0 = time.time()
-    calib_h: list[float] = []
-    kappa_eff = kappa
     for step in range(1, updates + 1):
         edge = choose_edge(edges, variant, same_seq_ratio, random)
         node_a, node_b = nodes[edge["a"]], nodes[edge["b"]]
@@ -148,14 +194,6 @@ def run_signed(base_checkpoint: str | Path, graph_path: str | Path,
         if not math.isfinite(float(grad_norm)):
             raise RuntimeError(f"non-finite grad norm at step {step}")
         optimizer.step()
-        if step <= calib_steps:
-            calib_h.extend([info["h_a"], info["h_b"]])
-            if step == calib_steps and len(calib_h) > 1:
-                import statistics as _st
-                emp_std = _st.stdev(calib_h) or 1e-8
-                kappa_eff = kappa * (target_h_std / emp_std)
-                print(f"[{log_tag}] calibrated kappa: emp_std={emp_std:.3e} "
-                      f"-> kappa_eff={kappa_eff:.3e}", flush=True)
         record = {
             "step": step, "edge_kind": edge["kind"], "case_id": cid,
             "dR": edge["dR"], "t": float(t), "z": float(z.detach()),

@@ -186,10 +186,30 @@ def train_method(name: str, world: SmallWorld, feats, log_p0, target, pairs, edg
     def H(seq, g=0):
         return float((feats[idx[(seq, g)]] @ theta).detach())
 
-    w_cf = credit_weights(world, pairs)
-    w_sign = sign_only_weights(world, pairs)
     for step in range(n_steps):
         opt.zero_grad()
+        def site_delta(seq: str, i: int) -> torch.Tensor:
+            """Δ_i H = H(site i = 1 | rest) - H(site i = 0 | rest)."""
+            s1 = seq[:i] + "1" + seq[i + 1:]
+            s0 = seq[:i] + "0" + seq[i + 1:]
+            return (feats[idx[(s1, 0)]] - feats[idx[(s0, 0)]]) @ theta
+
+        def weighted_local_z(win: str, lose: str, weights: dict[int, float]) -> torch.Tensor:
+            """Deployed CF-DPO analogue: Σ_i w_i (ℓ_i^- - ℓ_i^+).
+
+            ℓ_i(S) = -log sigmoid(Δ_i H(S)) is the site-conditional NLL of the
+            residue actually present at i.  The reference term vanishes at
+            θ=0 (both labels cost log 2), which is the toy reference model.
+            """
+            total = 0.0
+            for i in sorted(weights):
+                if win[i] == lose[i]:
+                    continue
+                l_win = -torch.nn.functional.logsigmoid(site_delta(win, i))
+                l_lose = -torch.nn.functional.logsigmoid(site_delta(lose, i))
+                total = total + weights[i] * (l_lose - l_win)
+            return total / tau
+
         if name == "oracle":
             q = q_from_theta(theta, feats, log_p0)
             loss = (q * (q.log() - target.log())).sum()
@@ -197,15 +217,23 @@ def train_method(name: str, world: SmallWorld, feats, log_p0, target, pairs, edg
             pieces = []
             if name in ("current_cf", "sign_only"):
                 for (win, lose) in pairs:
-                    a = idx[(win, 0)]
-                    b = idx[(lose, 0)]
-                    # weights methods: one preference edge loser->winner,
-                    # z = H(winner) - H(loser) (same convention as every edge)
-                    z = (feats[a] @ theta - feats[b] @ theta) / tau
+                    diffs = [i for i in range(world.n_sites) if win[i] != lose[i]]
+                    if name == "current_cf":
+                        # residue-level CF weights (c_cons + floor), sum_i w_i = 1
+                        cred = {i: max(world.local_signs(win, lose, i)[1], 0.0)
+                                for i in diffs}
+                        total = sum(cred.values())
+                        n = max(1, len(diffs))
+                        weights = ({i: (1 - 0.75) / n + 0.75 * cred[i] / total
+                                    for i in diffs} if total > 0
+                                   else {i: 1.0 / n for i in diffs})
+                    else:
+                        # sign-only / diff-only analogue: uniform over mutated sites
+                        weights = {i: 1.0 / max(1, len(diffs)) for i in diffs}
+                    z = weighted_local_z(win, lose, weights)
                     t = torch.sigmoid(torch.tensor(
                         (world.reward[win] - world.reward[lose]) / tau))
-                    weight = w_cf[(win, lose)] if name == "current_cf" else w_sign[(win, lose)]
-                    pieces.append(weight * torch.nn.functional.binary_cross_entropy_with_logits(
+                    pieces.append(torch.nn.functional.binary_cross_entropy_with_logits(
                         z.reshape(1), t.reshape(1)))
             else:  # signed / v2
                 for (sa, ga, sb, gb, dR, kind) in edges:

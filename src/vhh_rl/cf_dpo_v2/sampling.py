@@ -17,9 +17,12 @@ def choose_edge(edges: list[dict], variant: str, same_seq_ratio: float,
     same_seq = [e for e in edges if e["kind"] == "same_seq"]
     pref_local = [e for e in edges if e["kind"] in ("drop", "gain")]
     globals_ = [e for e in edges if e["kind"] == "global"]
+    # signed never samples same-seq: its mass must be renormalised away so the
+    # local/global split stays 75/25 (reviewer fix)
+    same_mass = same_seq_ratio if variant == "v2" else 0.0
     r = rng.random()
-    if variant == "v2" and same_seq and r < same_seq_ratio:
+    if same_mass > 0 and same_seq and r < same_mass:
         return rng.choice(same_seq)
-    if pref_local and r < same_seq_ratio + (1.0 - same_seq_ratio) * 0.75:
+    if pref_local and r < same_mass + (1.0 - same_mass) * 0.75:
         return rng.choice(pref_local)
     return rng.choice(globals_ or edges)

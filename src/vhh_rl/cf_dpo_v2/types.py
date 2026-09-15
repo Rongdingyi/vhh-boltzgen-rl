@@ -32,3 +32,16 @@ class Graph:
         if node.node_id in self.nodes:
             raise ValueError(f"duplicate comparison-graph node id: {node.node_id}")
         self.nodes[node.node_id] = node
+
+
+def check_edge_consistency(graph: "Graph", tol: float = 1e-6) -> None:
+    """Every edge must satisfy dR == R(b) - R(a) when both rewards are known."""
+    for e in graph.edges:
+        ra = graph.nodes[e.a].reward
+        rb = graph.nodes[e.b].reward
+        if ra is None or rb is None:
+            continue
+        if abs((rb - ra) - e.dR) > tol:
+            raise ValueError(
+                f"edge {e.kind} {e.a}->{e.b} violates dR=R(b)-R(a): "
+                f"stored {e.dR}, nodes {rb - ra}")

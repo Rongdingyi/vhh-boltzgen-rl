@@ -14,7 +14,9 @@ import torch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from vhh_rl.cf_dpo_v2.types import Edge, Graph, Node  # noqa: E402
+from vhh_rl.cf_dpo_v2.types import (  # noqa: E402
+    Edge, Graph, Node, check_edge_consistency,
+)
 
 GRAPH_FILE = ROOT / "runs/cf_dpo_v2/graph/pilot_graph.pt"
 
@@ -59,3 +61,14 @@ def test_built_graph_node_ids_unique_by_construction():
     for k in lifted:
         parts = k.split(":")
         assert len(parts) >= 5, k
+
+
+def test_edge_consistency_checker_rejects_inconsistent_edge():
+    g = Graph()
+    g.add_node(_node("a", 0.0))
+    g.add_node(_node("b", 1.0))
+    g.edges.append(Edge("a", "b", -5.0, "drop"))   # wrong sign
+    with pytest.raises(ValueError, match="violates dR"):
+        check_edge_consistency(g)
+    g.edges[0] = Edge("a", "b", 1.0, "drop")
+    check_edge_consistency(g)                       # ok

@@ -43,6 +43,13 @@ def test_signed_never_samples_same_seq():
     assert freq["same_seq"] == 0.0, freq
 
 
+def test_signed_local_global_split_is_75_25():
+    freq = _freq("signed", 0.25)
+    pref = freq["drop"] + freq["gain"]
+    assert abs(pref - 0.75) < 0.02, freq
+    assert abs(freq["global"] - 0.25) < 0.02, freq
+
+
 def test_branches_are_disjoint():
     """same-seq must not be reachable through the preference-local branch."""
     same_seq = [e for e in EDGES if e["kind"] == "same_seq"]
