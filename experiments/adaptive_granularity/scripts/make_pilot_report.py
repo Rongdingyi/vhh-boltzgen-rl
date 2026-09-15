@@ -206,10 +206,18 @@ def _gate_b(summary: dict, audit: dict) -> dict:
     b3_pass = False
     if region and region["delta_vs_current"] is not None:
         b3_pass = rescue_share >= 0.25 and region["delta_vs_current"] >= -0.75
+    # Task book §46: entering Phase C via B3 (all simple variants worse than CF
+    # but rescue coverage high and region-only not catastrophic) fixes the best
+    # simple arm to Region-only.
     best = None
-    if b2_pass:
+    none_better_than_cf = all(
+        info["delta_vs_current"] is None or info["delta_vs_current"] < 0
+        for info in simple_candidates.values())
+    if not b1_pass and not b2_pass and b3_pass and none_better_than_cf:
         best = "region"
-    if b1_pass:
+    elif b2_pass:
+        best = "region"
+    elif b1_pass:
         cand = [a for a in ("nofloor", "strict") if a in simple_candidates
                 and simple_candidates[a]["delta_vs_current"] is not None]
         if cand:
