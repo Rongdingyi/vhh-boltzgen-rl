@@ -3,6 +3,7 @@
 from __future__ import annotations
 import argparse
 import json
+import shutil
 from pathlib import Path
 
 import _common as C  # noqa: E402
@@ -18,6 +19,49 @@ ARMS = {
 }
 STEPS = 100
 SEED = 20260913
+GATED_ARMS = {"adaptive", "shuffle", "eligible-cf"}
+GATE_A = C.AUDIT_DIR / "audit_summary.json"
+GATE_B = C.PILOT_DIR / "gate_b.json"
+
+
+def resolve_arm_paths(arm: str):
+    """(pairs_path, weights_path, trainer variant) for one pilot arm."""
+    spec = ARMS[arm]
+    if spec["kind"] == "current_cf":
+        return (C.PILOT_DIR / "current/pairs_pilot4.jsonl",
+                C.PILOT_DIR / "current/weights_pilot4.json", "cf")
+    if spec["kind"] == "eligible_cf":
+        return (C.WEIGHTS_DIR / "pairs_adaptive_eligible_cf_pilot4.jsonl",
+                C.CURRENT_WEIGHTS, "cf")
+    variant = spec["variant"]
+    return (C.WEIGHTS_DIR / f"pairs_{variant}_pilot4.jsonl",
+            C.WEIGHTS_DIR / "ag_weights.json", variant)
+
+
+def require_gate_a(override: str | None) -> None:
+    """No GPU pilot before Gate A passes (task book §14, review 9)."""
+    payload = json.loads(GATE_A.read_text()) if GATE_A.is_file() else None
+    if payload and payload.get("gate_a_pass") is True:
+        return
+    if override:
+        print(f"[warn] Gate A override: {override}", flush=True)
+        return
+    raise SystemExit(
+        f"Gate A has not passed ({GATE_A}); pilot training blocked. "
+        "Run ag-audit first, or pass --override-gate REASON.")
+
+
+def require_gate_b(override: str | None) -> None:
+    """Phase C arms are blocked until Gate B passed (task book §92, review 9)."""
+    payload = json.loads(GATE_B.read_text()) if GATE_B.is_file() else None
+    if payload and payload.get("pass") is True:
+        return
+    if override:
+        print(f"[warn] Gate B override: {override}", flush=True)
+        return
+    raise SystemExit(
+        f"Gate B has not passed ({GATE_B}); Phase C arms are blocked. "
+        "Run Phase B + make_pilot_report first, or pass --override-gate REASON.")
 
 
 def _materialize_current_cf(pairs: list[dict]) -> tuple[Path, Path]:
@@ -42,20 +86,21 @@ def main() -> None:
     parser.add_argument("--arm", required=True, choices=list(ARMS))
     parser.add_argument("--steps", type=int, default=STEPS)
     parser.add_argument("--seed", type=int, default=SEED)
+    parser.add_argument("--override-gate", default=None,
+                        help="reason string; only for deliberate manual overrides")
     args = parser.parse_args()
     spec = ARMS[args.arm]
     pairs = C.load_pairs()
 
     if spec["kind"] == "current_cf":
-        pairs_path, weights_path = _materialize_current_cf(pairs)
-        variant = "cf"
-    else:
-        pairs_path = C.WEIGHTS_DIR / f"pairs_{spec['variant']}_pilot4.jsonl"
-        weights_path = C.WEIGHTS_DIR / "ag_weights.json"
-        variant = spec["variant"]
-        if not pairs_path.is_file():
-            raise SystemExit(f"missing {pairs_path}; run ag-build-weights + "
-                             f"ag-validate-weights first")
+        _materialize_current_cf(pairs)
+    require_gate_a(args.override_gate)
+    if args.arm in GATED_ARMS:
+        require_gate_b(args.override_gate)
+    pairs_path, weights_path, variant = resolve_arm_paths(args.arm)
+    if not pairs_path.is_file():
+        raise SystemExit(f"missing {pairs_path}; run ag-build-weights + "
+                         f"ag-validate-weights first")
     pilot_pairs = [json.loads(l) for l in pairs_path.open()]
     counts = {case: sum(1 for p in pilot_pairs if p["case_id"] == case)
               for case in C.PILOT_TRAIN_CASES}
@@ -67,6 +112,7 @@ def main() -> None:
     from vhh_rl.native_atom14.weighted_dpo import run_weighted_dpo
 
     out_dir = C.PILOT_DIR / args.arm
+    shutil.rmtree(out_dir, ignore_errors=True)   # no mixed old/new logs (review 6)
     summary = run_weighted_dpo(
         base_checkpoint=C.BASE_CKPT,
         pairs_path=pairs_path,

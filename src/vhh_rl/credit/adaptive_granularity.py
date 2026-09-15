@@ -141,10 +141,16 @@ def weight_entropy(weights: Mapping[int, float]) -> float:
 
 
 def _normalize(raw: Mapping[int, float], reason_zero: str,
-               tol: float) -> WeightBuildResult:
+               eps: float = 1e-12) -> WeightBuildResult:
+    """Normalize raw masses; ``eps`` is a numerical epsilon ONLY.
+
+    The classification tolerance ``TOL`` must never be used here: No-floor
+    abstains iff the total consistent credit is exactly zero, so tiny-but-
+    positive credits still produce weights (task book §19, review item 4).
+    """
     values = {int(p): float(w) for p, w in raw.items() if float(w) > 0}
     total = sum(values.values())
-    if total <= tol:
+    if total <= eps:
         return WeightBuildResult(weights={}, eligible=False, reason=reason_zero)
     weights = {p: v / total for p, v in sorted(values.items())}
     return WeightBuildResult(weights=weights, eligible=True, reason="ok")
@@ -185,7 +191,7 @@ def no_floor_weights(res_rows: Sequence[Mapping[str, Any]],
                      tol: float = TOL) -> WeightBuildResult:
     """s_i = max(c_cons, 0); normalize; ineligible when all zero."""
     raw = {_row_pos(r): max(_num(r.get("c_cons")), 0.0) for r in res_rows}
-    out = _normalize(raw, "no_floor:sum_c_cons==0", tol)
+    out = _normalize(raw, "no_floor:sum_c_cons==0")
     out.diagnostics = {"n_diff": len(raw),
                        "n_active": len(out.weights),
                        "entropy": weight_entropy(out.weights)}
@@ -206,7 +212,7 @@ def strict_consensus_weights(res_rows: Sequence[Mapping[str, Any]],
             continue
         n_pos += 1
         raw[_row_pos(r)] = min(_num(r.get("c_drop")), _num(r.get("c_gain")))
-    out = _normalize(raw, "strict_consensus:no_stable_positive", tol)
+    out = _normalize(raw, "strict_consensus:no_stable_positive")
     out.diagnostics = {"n_diff": len(res_rows), "n_stable_positive": n_pos,
                        "n_active": len(out.weights),
                        "entropy": weight_entropy(out.weights)}
@@ -237,7 +243,7 @@ def strict_region_weights(res_rows: Sequence[Mapping[str, Any]],
         region_mass[region] = a_r
         for p in positions:
             raw[p] = raw.get(p, 0.0) + per
-    out = _normalize(raw, "strict_region:no_stable_positive_region", tol)
+    out = _normalize(raw, "strict_region:no_stable_positive_region")
     out.diagnostics = {"n_diff": len(res_rows), "n_regions": len(by_region),
                        "n_active": len(out.weights),
                        "region_mass": region_mass,
@@ -293,7 +299,7 @@ def adaptive_weights(res_rows: Sequence[Mapping[str, Any]],
             continue
         modes[region] = MODE_ABSTAIN
         n_abstain += 1
-    out = _normalize(raw, "adaptive:all_regions_abstain", tol)
+    out = _normalize(raw, "adaptive:all_regions_abstain")
     out.modes = modes
     out.diagnostics = {
         "n_diff": len(res_rows),
@@ -317,19 +323,25 @@ def adaptive_weights(res_rows: Sequence[Mapping[str, Any]],
 def shuffle_pair_weights(weights: Mapping[int, float],
                          differing_positions: Iterable[int],
                          rng: random.Random) -> dict[int, float]:
-    """Permute the active weight multiset across the pair's differing positions.
+    """Permute the *full* weight multiset across the pair's differing positions.
 
-    Keeps the multiset, entropy, active count and pair eligibility identical;
-    only the position-to-weight correspondence changes.
+    The multiset includes the zeros of inactive differing positions, so the
+    permutation is a genuine random re-assignment of weight values to
+    positions.  This keeps the multiset, entropy, active count and eligibility
+    identical while changing the position correspondence — including the
+    important case ``active == all differing positions`` where a
+    shuffle-of-active-values-only would silently be the identity.
     """
-    values = sorted(float(w) for w in weights.values() if float(w) > 0)
     positions = sorted({int(p) for p in differing_positions})
-    if len(values) > len(positions):
-        raise ValueError("more active weights than differing positions")
-    if not values:
+    outside = {int(p) for p in weights} - set(positions)
+    if outside:
+        raise ValueError(f"weights on positions outside the differing set: "
+                         f"{sorted(outside)[:5]}")
+    if not positions:
         return {}
-    chosen = rng.sample(positions, len(values))
-    return dict(zip(sorted(chosen), values))
+    values = [float(weights.get(p, 0.0)) for p in positions]
+    rng.shuffle(values)
+    return {p: w for p, w in zip(positions, values) if w > 0}
 
 
 # ---------------------------------------------------------------------------

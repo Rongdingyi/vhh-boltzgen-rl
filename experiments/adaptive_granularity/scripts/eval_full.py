@@ -3,6 +3,7 @@
 from __future__ import annotations
 import argparse
 import json
+import shutil
 
 import _common as C  # noqa: E402
 
@@ -12,8 +13,10 @@ SEED_OFFSET = 800000
 
 def _eval(tag: str, ckpt, run_tag: str) -> dict:
     from vhh_rl.cf_opsd.evaluator import evaluate
+    run_root = C.FULL_DIR / "eval" / run_tag
+    shutil.rmtree(run_root, ignore_errors=True)   # stale-dir guard (review 7)
     return evaluate(C.heldout8(), ckpt, tag, num_samples=8,
-                    seed_offset=SEED_OFFSET, run_root=C.FULL_DIR / "eval" / run_tag)
+                    seed_offset=SEED_OFFSET, run_root=run_root)
 
 
 def main() -> None:

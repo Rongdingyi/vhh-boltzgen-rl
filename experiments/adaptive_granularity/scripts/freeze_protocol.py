@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Phase A0: freeze provenance for AG-CF-DPO (task book §7)."""
 from __future__ import annotations
+import argparse
 import json
 import subprocess
 from pathlib import Path
@@ -21,6 +22,12 @@ def _git(path: Path) -> str | None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force", action="store_true",
+                        help="overwrite an existing FROZEN_PROTOCOL.yaml")
+    args = parser.parse_args()
+    if OUT.is_file() and not args.force:
+        raise SystemExit(f"{OUT} already exists; refusing to overwrite without --force")
     splits = C.manifest_splits()
     payload = {
         "version": 1,

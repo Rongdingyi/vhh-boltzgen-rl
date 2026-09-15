@@ -48,4 +48,5 @@ jobs:
             tests/test_ag_adaptive_weights.py \
             tests/test_ag_abstention.py \
             tests/test_ag_shuffle.py \
-            tests/test_ag_weight_invariants.py
+            tests/test_ag_weight_invariants.py \
+            tests/test_ag_pilot_wiring.py

@@ -51,9 +51,12 @@ def main() -> None:
         label = C.VARIANT_LABEL[{"nofloor": "no_floor", "strict": "strict_consensus",
                                  "region": "strict_region"}[arm]]
         simple_rows.append((label, v))
+    def variant_of(arm: str) -> str:
+        return C.ARM_TO_VARIANT.get(arm, arm)
+
     pre_table = "\n".join(
-        f"| {label} | {materialized.get(arm, {}).get('eligible_pairs')} | "
-        f"{weights.get('variant_stats', {}).get(arm, {}).get('median_active_fraction')} | "
+        f"| {label} | {materialized.get(variant_of(arm), {}).get('eligible_pairs')} | "
+        f"{weights.get('variant_stats', {}).get(variant_of(arm), {}).get('median_active_fraction')} | "
         f"{v.get('reward_mean_hist4'):+.3f} | {v.get('reward_mean'):+.3f} | "
         f"{v.get('delta_vs_current'):+.3f} | {v.get('wins_vs_current')} |"
         for arm, (label, v) in zip(SIMPLE_ARMS, simple_rows))
@@ -122,6 +125,7 @@ Current CF heldout8 reward：{cur8}
 ```
 """
     (DOCS / "AG_PRE_PILOT.md").write_text(pre_md)
+    (C.PILOT_DIR / "gate_b.json").write_text(json.dumps(gate_b, indent=1))
 
     pilot_md = f"""# AG-CF-DPO Pilot（Phase C, task book §46-§51, §81-§82）
 
@@ -147,6 +151,7 @@ Current CF heldout8 reward：{cur8}
 - 3-seed confirmation（§49/§50）仅对 Current CF / Adaptive 运行，结果见 `runs/adaptive_granularity/pilot/seed_*`。
 """
     (DOCS / "AG_PILOT.md").write_text(pilot_md)
+    (C.PILOT_DIR / "gate_c.json").write_text(json.dumps(gate_c, indent=1))
     print(json.dumps({"gate_b": gate_b["pass"], "gate_c": gate_c["verdict"]}, indent=1))
 
 

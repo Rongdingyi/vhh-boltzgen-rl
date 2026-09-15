@@ -3,6 +3,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
@@ -26,6 +28,15 @@ def test_no_floor_ignores_negative_and_weak_cons():
     out = no_floor_weights(_rows([-5.0, 0.5, 0.0]))
     assert out.eligible
     assert out.weights == {11: 1.0}
+
+
+def test_no_floor_small_positive_credit_is_not_abstained():
+    """Task book §19: abstain iff sum == 0; 0.05 is a classification tolerance,
+    never a normalization threshold (review item 4)."""
+    out = no_floor_weights(_rows([0.02, 0.01, 0.0, 0.0]))
+    assert out.eligible
+    assert out.weights[10] == pytest.approx(2.0 / 3.0)
+    assert out.weights[11] == pytest.approx(1.0 / 3.0)
 
 
 def test_no_floor_empty_is_ineligible_not_uniform():

@@ -3,6 +3,7 @@
 from __future__ import annotations
 import argparse
 import json
+import shutil
 from pathlib import Path
 
 import _common as C  # noqa: E402
@@ -16,9 +17,10 @@ SEED_OFFSET = 800000
 def _evaluate(tag: str, ckpt: Path | None, cases: list[str], run_tag: str) -> dict:
     from vhh_rl.cf_opsd.evaluator import evaluate
 
+    run_root = C.PILOT_DIR / "eval" / run_tag
+    shutil.rmtree(run_root, ignore_errors=True)   # stale-dir guard (review 7)
     return evaluate(sorted(cases), ckpt, tag, num_samples=NUM_SAMPLES,
-                    seed_offset=SEED_OFFSET,
-                    run_root=C.PILOT_DIR / "eval" / run_tag)
+                    seed_offset=SEED_OFFSET, run_root=run_root)
 
 
 def _summarize(summary: dict, refs: dict[str, float | None]) -> dict:
@@ -35,14 +37,16 @@ def _summarize(summary: dict, refs: dict[str, float | None]) -> dict:
         "unique": sum(v["n_unique"] for v in cases.values()),
         "n": n,
     }
-    for name, ref in refs.items():
+    for name in ("base", "current"):
+        ref = refs.get(name)                       # scalar reference only
         if ref is None:
             continue
         payload[f"delta_vs_{name}"] = summary["reward_mean"] - ref
+        ref_cases = refs.get(f"per_case_{name}") or {}
         wins = ties = losses = 0
         for c, v in cases.items():
-            other = refs.get(f"per_case_{name}", {}).get(c)
-            if other is None:
+            other = ref_cases.get(c)
+            if other is None or v["reward_mean"] is None:
                 continue
             d = v["reward_mean"] - other
             wins += int(d > 1e-9)

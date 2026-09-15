@@ -28,6 +28,9 @@ HELDOUT4 = ["sab2_4hf5_h", "sab2_4mwf_h", "sab2_5mp6_h", "sab2_6cvk_b2"]
 
 VARIANTS = ["no_floor", "strict_consensus", "strict_region",
             "adaptive", "adaptive_shuffle"]
+ARM_TO_VARIANT = {"nofloor": "no_floor", "strict": "strict_consensus",
+                  "region": "strict_region", "adaptive": "adaptive",
+                  "shuffle": "adaptive_shuffle"}
 VARIANT_LABEL = {"current_cf": "Current CF", "no_floor": "No-floor",
                  "strict_consensus": "Strict consensus",
                  "strict_region": "Strict region", "adaptive": "Adaptive",

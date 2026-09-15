@@ -86,6 +86,11 @@ def main() -> None:
         w = w / w.sum().clamp_min(1e-12)
         winner = _load_coords(C.POOL, pair["winner_sample_id"])
         loser = _load_coords(C.POOL, pair["loser_sample_id"])
+        # review 11: both losses must see the same diffusion realization, so we
+        # reset the RNG to one per-site seed before each step (sigma/noise and
+        # rigid augmentation draws are then identical for the two objectives).
+        site_seed = 100000 + len(rows)
+        torch.manual_seed(site_seed)
         g_step = compute_weighted_cf_dpo_step(policy.structure_module,
                                               reference.structure_module, feats,
                                               winner, loser, masks, w, kwargs,
@@ -100,6 +105,7 @@ def main() -> None:
                          weights_only=True).float()
         preferred, rejected = ((cfc, anchor) if edge.preferred_side == "cf"
                                else (anchor, cfc))
+        torch.manual_seed(site_seed)   # same realization as the global step
         l_step = signed_local_dpo_step(policy.structure_module,
                                        reference.structure_module, feats,
                                        preferred, rejected, mask, kwargs, beta=10.0)
@@ -117,10 +123,14 @@ def main() -> None:
             "case_id": edge.case_id, "region": cred.get("region"),
             "c_drop": cred.get("c_drop"), "c_gain": cred.get("c_gain"),
             "cosine": cosine,
+            "sigma_global": float(g_step.sigma.reshape(-1).mean()),
+            "sigma_local": float(l_step.sigma.reshape(-1).mean()),
             "z_global": float(g_step.dpo.z.mean()),
             "z_local": float(l_step.dpo.z.mean()),
         })
 
+    sigma_mismatch = sum(1 for r in rows
+                         if abs(r["sigma_global"] - r["sigma_local"]) > 1e-9)
     cosines = [r["cosine"] for r in rows if r["cosine"] is not None]
     cosines_sorted = sorted(cosines)
     payload = {
@@ -132,14 +142,16 @@ def main() -> None:
         if cosines else None,
         "strong_negative_fraction": (sum(1 for c in cosines if c < -0.1) / len(cosines))
         if cosines else None,
+        "sigma_mismatch_sites": sigma_mismatch,
         "by_region": _group(rows, "region"),
         "rows": rows,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(payload, indent=1))
     print(json.dumps({k: payload[k] for k in
-                      ("n_sites", "median_cosine", "p25", "p75",
-                       "negative_fraction", "strong_negative_fraction")}, indent=1))
+                      ("n_sites", "sigma_mismatch_sites", "median_cosine", "p25",
+                       "p75", "negative_fraction", "strong_negative_fraction")},
+                     indent=1))
 
 
 def _group(rows: list[dict], key: str) -> dict:

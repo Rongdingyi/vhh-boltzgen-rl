@@ -3,6 +3,7 @@
 from __future__ import annotations
 import argparse
 import json
+import shutil
 
 import _common as C  # noqa: E402
 
@@ -15,6 +16,20 @@ ARMS = {
 }
 STEPS = 500
 SEED = 20260913
+GATE_C = C.PILOT_DIR / "gate_c.json"
+
+
+def require_gate_c(override: str | None) -> None:
+    """Full training is blocked unless Phase C returned STRONG_GO (§93, review 9)."""
+    payload = json.loads(GATE_C.read_text()) if GATE_C.is_file() else None
+    if payload and payload.get("verdict") == "STRONG_GO":
+        return
+    if override:
+        print(f"[warn] Gate C override: {override}", flush=True)
+        return
+    raise SystemExit(
+        f"Gate C verdict is not STRONG_GO ({GATE_C}); full training blocked. "
+        "Pass --override-gate REASON for a deliberate manual override.")
 
 
 def main() -> None:
@@ -24,8 +39,11 @@ def main() -> None:
                         help="for f1: no_floor|strict_consensus|strict_region")
     parser.add_argument("--steps", type=int, default=STEPS)
     parser.add_argument("--seed", type=int, default=SEED)
+    parser.add_argument("--override-gate", default=None,
+                        help="reason string; deliberate manual override only")
     args = parser.parse_args()
     spec = ARMS[args.arm]
+    require_gate_c(args.override_gate)
     if spec["kind"] == "current_cf":
         pairs_path, weights_path, variant = C.PAIRS, C.CURRENT_WEIGHTS, "cf"
     elif spec["kind"] == "eligible_cf":
@@ -44,6 +62,7 @@ def main() -> None:
 
     out_dir = (C.FULL_DIR / args.arm if args.seed == SEED
                else C.FULL_DIR / f"{args.arm}_seed{args.seed}")
+    shutil.rmtree(out_dir, ignore_errors=True)   # clean rerun (review 6)
     summary = run_weighted_dpo(
         base_checkpoint=C.BASE_CKPT,
         pairs_path=pairs_path,
