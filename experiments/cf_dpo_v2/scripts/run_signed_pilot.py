@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """CF-DPO v2 experiment 4 pilot: signed / v2 training + held-out evaluation."""
 from __future__ import annotations
-import argparse, json, sys
+import argparse, json, shutil, sys
 from pathlib import Path
 
 ROOT = Path("/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl")
@@ -21,22 +21,26 @@ def main() -> None:
     parser.add_argument("--kappa", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=20260914)
     parser.add_argument("--eval", action="store_true")
+    parser.add_argument("--eval-only", action="store_true")
     args = parser.parse_args()
 
-    from vhh_rl.cf_dpo_v2.signed_trainer import run_signed
-
     out_dir = OUT / f"{args.variant}_u{args.updates}"
-    summary = run_signed(BASE, GRAPH, out_dir, variant=args.variant, tau=args.tau,
-                         kappa=args.kappa, updates=args.updates, checkpoint_every=50,
-                         seed=args.seed, log_tag=f"cfd2-{args.variant}")
-    print(json.dumps(summary, indent=1))
-    if args.eval:
+    if not args.eval_only:
+        from vhh_rl.cf_dpo_v2.signed_trainer import run_signed
+
+        summary = run_signed(BASE, GRAPH, out_dir, variant=args.variant, tau=args.tau,
+                             kappa=args.kappa, updates=args.updates, checkpoint_every=50,
+                             seed=args.seed, log_tag=f"cfd2-{args.variant}")
+        print(json.dumps(summary, indent=1))
+    if args.eval or args.eval_only:
         from vhh_rl.cf_opsd.evaluator import evaluate
         for step in (50, 100):
             ckpt = out_dir / f"checkpoint_{step:04d}.pt"
             if ckpt.is_file():
+                run_root = out_dir / f"eval_u{step}"
+                shutil.rmtree(run_root, ignore_errors=True)  # fresh eval pools
                 res = evaluate(HELDOUT, ckpt, f"cfd2_{args.variant}_u{step}",
-                               run_root=out_dir / f"eval_u{step}")
+                               run_root=run_root)
                 print(f"eval u{step}: reward_mean={res['reward_mean']}")
 
 
