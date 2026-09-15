@@ -1,23 +1,22 @@
-> **状态更新（审阅后，2026-09-15）**：本文档原先的 **NO-GO（算法形态）判定已撤回**。
-> 审阅发现 4 个会实质改变训练方向的代码错误（drop 边 dR 方向、node ID 覆盖、
-> same-seq 双重采样、Exp2 基线方向），并污染了 proxy 校验的 ground truth；
-> 详见 `CF_DPO_V2_ERRATA.md`。当前正确状态为：
+> **状态更新（审阅修复 + 重跑后，2026-09-15）**
 >
-> **INVALID EXPERIMENT / NEEDS CORRECTNESS RERUN**
+> 审阅发现的 4 个代码错误（E1 drop 方向 / E2 node ID 覆盖 / E3 same-seq 双重采样 /
+> E4 Exp2 方向）与 proxy ground-truth 污染（E5）已全部修复并重跑，详见
+> `CF_DPO_V2_ERRATA.md`。**基于修正后的有效证据**，最终判定为：
 >
-> - 有效：Exp1 数据复核；Exp3 几何 lift 接受率（86.5%、FR 0、same-seq 覆盖 100%）；
->   CF-DPO-mini matched baseline（+4.39，不受 v2 bug 影响）。
-> - 无效待重跑：Exp2 的 weighted-vs-signed 数字；Exp4 signed/v2 pilot 表；
->   proxy sign agreement = 0.475（ground truth 被污染）。
-> - 下文 §5–§9 的旧结论保留为历史记录，**不再作为判定依据**；修正后的结果将
->   写入重跑版文档。
+> **NO-GO（算法形态，valid experiments）**
 >
-# CF-DPO v2 Feasibility Decision
-
-任务书：`CF_DPO_V2_RESEARCH_PROPOSAL.md`（references/cf_dpo_v2/）。
-执行范围：Exp1（已有数据复核）、Exp2（精确小模型）、Exp3（原生几何 lift +
-代理校验）、Exp4 pilot（4 train / 4 held-out，matched 50/100 updates）。
-本阶段不做 24-case 全量扩展（原因见 §6）。
+> - Exp4 修正重跑：v2 u100 仅 +0.69、signed +0.54（2/4 胜），而同预算普通 DPO
+>   （CF-DPO-mini）为 **+4.39（4/4 胜）** → 同池普通 DPO 远超完整 v2（proposal §14）。
+> - Proxy 修正测量：符号一致率 **0.526**（≈随机）、噪声 ≈3× 信号
+>   （label mismatch = 0，测量干净）→ 代理失配是机制性原因。
+> - Exp2（精确模型，修正后）：signed/v2 的序列 KL（0.0005–0.0007）显著低于加权类
+>   （0.53–0.57），v2 同结果边使条件几何 KL 为 0.0000 —— **理论方向成立，但无法在
+>   原生能量代理上兑现**。
+> - 有效保留：Exp1 数据复核；Exp3 几何 lift（86.5%/FR 0/同序列 100%）；
+>   CF-DPO-mini 基线。
+>
+> 下文 §1–§10 为修正前的原始记录；§5/§6 的数字已被上表取代。
 
 ## 1. Motivation
 
