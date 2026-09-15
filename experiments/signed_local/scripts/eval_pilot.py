@@ -17,19 +17,24 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--arms", nargs="*", default=None)
     parser.add_argument("--with-base", action="store_true")
+    parser.add_argument("--run-tag", default=None,
+                        help="override the eval run dir tag (eval_<tag>_<arm>)")
     args = parser.parse_args()
     out_dir = ROOT / "runs/signed_local/pilot"
     results = {}
+    def run_root(arm: str) -> Path:
+        return out_dir / (f"eval_{args.run_tag}_{arm}" if args.run_tag else f"eval_{arm}")
+
     if args.with_base:
         results["base"] = evaluate_reward(None, HELDOUT, "slcf_base",
-                                          run_root=out_dir / "eval_base")
+                                          run_root=run_root("base"))
     for arm in (args.arms or list(ARMS)):
         ckpt = out_dir / arm / f"checkpoint_{ARMS[arm]:04d}.pt"
         if not ckpt.is_file():
             print(f"[skip] {arm}: missing {ckpt}")
             continue
         results[arm] = evaluate_reward(ckpt, HELDOUT, f"slcf_{arm}",
-                                       run_root=out_dir / f"eval_{arm}")
+                                       run_root=run_root(arm))
     merged_path = out_dir / "pilot_eval.json"
     merged = json.loads(merged_path.read_text()) if merged_path.is_file() else {}
     merged.update(results)

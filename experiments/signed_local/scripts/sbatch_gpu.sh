@@ -32,7 +32,9 @@ case "$STAGE" in
     ARM=${ARM:?set ARM=cf|local|neg|main|shuffle}
     $PY -u "$ROOT/experiments/signed_local/scripts/train_pilot.py" --arm "$ARM" ;;
   pilot-eval)
-    $PY -u "$ROOT/experiments/signed_local/scripts/eval_pilot.py" --with-base ;;
+    ARMS_ARG=""; [ -n "${ARMS:-}" ] && ARMS_ARG="--arms $ARMS"
+    TAG_ARG=""; [ -n "${RUN_TAG:-}" ] && TAG_ARG="--run-tag $RUN_TAG"
+    $PY -u "$ROOT/experiments/signed_local/scripts/eval_pilot.py" --with-base $ARMS_ARG $TAG_ARG ;;
   heldout)
     $PY -u "$ROOT/experiments/signed_local/scripts/build_heldout_edges.py"
     $PY -u "$ROOT/experiments/signed_local/scripts/eval_local_preference.py" ;;
