@@ -30,33 +30,7 @@ POOL = ROOT / "runs/native_pool"
 CF = ROOT / "runs/next_stage/counterfactual"
 
 
-@dataclass
-class Node:
-    node_id: str
-    case_id: str
-    coords: torch.Tensor
-    sequence: str
-    reward: float | None
-    role: str  # pool | lifted | realization
-
-
-@dataclass
-class Edge:
-    a: str
-    b: str
-    dR: float
-    kind: str
-
-
-@dataclass
-class Graph:
-    nodes: dict[str, Node] = field(default_factory=dict)
-    edges: list[Edge] = field(default_factory=list)
-
-    def add_node(self, node: Node) -> None:
-        if node.node_id in self.nodes:
-            raise ValueError(f"duplicate comparison-graph node id: {node.node_id}")
-        self.nodes[node.node_id] = node
+from .types import Edge, Graph, Node  # noqa: F401  (re-exported for callers)
 
 
 def classify(drop: float, gain: float, tol: float = 0.05) -> str:

@@ -14,7 +14,7 @@ import torch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from vhh_rl.cf_dpo_v2.graph_dataset import Edge, Graph, Node  # noqa: E402
+from vhh_rl.cf_dpo_v2.types import Edge, Graph, Node  # noqa: E402
 
 GRAPH_FILE = ROOT / "runs/cf_dpo_v2/graph/pilot_graph.pt"
 
