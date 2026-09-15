@@ -25,6 +25,7 @@ case "$STAGE" in
       "$ROOT/tests/test_ag_no_floor.py" "$ROOT/tests/test_ag_strict_consensus.py" \
       "$ROOT/tests/test_ag_region_weights.py" "$ROOT/tests/test_ag_adaptive_weights.py" \
       "$ROOT/tests/test_ag_abstention.py" "$ROOT/tests/test_ag_shuffle.py" \
-      "$ROOT/tests/test_ag_weight_invariants.py" ;;
+      "$ROOT/tests/test_ag_weight_invariants.py" \
+      "$ROOT/tests/test_ag_pilot_wiring.py" ;;
   *) echo "unknown STAGE=$STAGE" >&2; exit 2 ;;
 esac
