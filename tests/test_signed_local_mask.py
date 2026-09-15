@@ -39,7 +39,7 @@ def _feats() -> dict:
 
 def test_mask_selects_exactly_target_fake_atoms():
     feats = _feats()
-    mask = target_residue_mask(feats, position=2, design_positions=(2, 3))
+    mask = target_residue_mask(feats, position=2, design_positions=(2,))
     assert mask.tolist() == [False, False, True, True, False, False, False, False]
     assert_mask_invariants(feats, mask, target_token=2)
 
@@ -47,7 +47,7 @@ def test_mask_selects_exactly_target_fake_atoms():
 def test_non_design_position_rejected():
     feats = _feats()
     with pytest.raises(ValueError):
-        target_residue_mask(feats, position=3, design_positions=(2,))
+        target_residue_mask(feats, position=3, design_positions=(2, 3))
     with pytest.raises(ValueError):
         target_residue_mask(feats, position=1, design_positions=(2,))
 

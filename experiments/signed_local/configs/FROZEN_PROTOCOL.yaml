@@ -1,0 +1,28 @@
+version: 1
+method: sl_cf_dpo
+repo_commit: a0484a718646a5fe57cae71eff7525b0fbb5b07e
+boltzgen_commit: a3149cf18eeb58648d1abbb27539bd73f746cdda
+base_checkpoint_sha256: 360af8bd6e59527ff6ec25dd81253967f3bd3567d200053b10680634751f8e3c
+pairs_train_sha256: fd9776fd8e82d2be57904b5f82ddd84cbfae4831d27e8ac54eb2713aae338b39
+residue_credit_sha256: c8a1b01abfbaf45e7040d36dea9927973a31f0be1963eb45d1fad73fbb827305
+counterfactual_scores_sha256: e805a59cc96a958e6a003172cde965272fa7b6d8c576b5337446a2a7f73b3f9d
+residue_weights_sha256: b5d1cbe95e75e99593850627edfe82f2f69f5d531242d5ca03b16192e89448d3
+train_edges_sha256: 0373b1b151c5d548cdebc6dacd72e5e7bc5e7b2a5c42784fa1b129e6bebf521f
+heldout_edges_sha256: null
+train_cases:
+- sab2_6u52_c
+- sab2_7sl5_d
+- sab2_7nqk_b
+- sab2_6mqe_h
+heldout_cases:
+- sab2_4hf5_h
+- sab2_4mwf_h
+- sab2_5mp6_h
+- sab2_6cvk_b2
+reward_tolerance: 0.05
+beta_global: 10.0
+beta_local: 10.0
+eta: 0.75
+lr: 1.0e-05
+schedule: deterministic_3_to_1
+eval_seeds: seed_base + 800000 (8 samples/case)
