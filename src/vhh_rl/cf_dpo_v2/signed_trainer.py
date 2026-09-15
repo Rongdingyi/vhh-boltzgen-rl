@@ -35,7 +35,9 @@ from ..native_atom14.checkpoint import (
     save_native_checkpoint, trainable_score_params,
 )
 from ..native_atom14.denoise_loss import per_sample_denoising_loss
-from ..native_atom14.dpo_trainer import load_conditioning, move_conditioning
+from ..native_atom14.dpo_trainer import (
+    load_case_conditioning, load_conditioning, move_conditioning,
+)
 from ..native_atom14.paired_noise import paired_noising
 from .sampling import choose_edge
 
@@ -110,18 +112,8 @@ def run_signed(base_checkpoint: str | Path, graph_path: str | Path,
     def prepare_cond(cid: str) -> dict:
         if cid in cond_cache:
             return cond_cache[cid]
-        cond = None
-        rollout_dir = ROOT / "runs/cf_opsd/rollouts/train" / cid
-        candidates = sorted(rollout_dir.glob("seed*.pt")) if rollout_dir.is_dir() else []
-        if candidates:
-            payload = torch.load(candidates[0], map_location="cpu", weights_only=False)
-            cond = payload.get("cond_kwargs") if isinstance(payload, dict) else None
-        if cond:
-            cond_cache[cid] = move_conditioning(cond, device=DEVICE)
-        elif cond_dir is not None:
-            cond_cache[cid] = move_conditioning(load_conditioning(cond_dir, cid), device=DEVICE)
-        else:
-            raise FileNotFoundError(f"no conditioning available for {cid}")
+        cond = load_case_conditioning(cid, cond_dir, ROOT / "runs/cf_opsd/rollouts/train")
+        cond_cache[cid] = move_conditioning(cond, device=DEVICE)
         return cond_cache[cid]
 
     def train_step(edge: dict, kappa_value: float, opt) -> tuple[float, float, dict]:

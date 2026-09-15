@@ -1,0 +1,40 @@
+method: sl_cf_dpo
+
+base:
+  checkpoint: /share/home/rongdingyi/programs/proteingen/boltzgen/ckpts/boltzgen1_diverse.ckpt
+
+reward:
+  name: cdr_camelid_margin
+  tolerance: 0.05
+
+global:
+  method: existing_cf_dpo
+  eta: 0.75
+  beta: 10.0
+
+local:
+  classes: [both_negative, sign_flip]
+  beta: 10.0
+  use_reward_magnitude: false
+  mask: target_residue_fake_atoms
+
+schedule:
+  type: deterministic_3_to_1
+
+optimizer:
+  name: adamw
+  lr: 1.0e-5
+  weight_decay: 0
+  max_grad_norm: 1.0
+
+pilot:
+  updates: 100
+  seed: 20260915
+  train_cases: [sab2_6u52_c, sab2_7sl5_d, sab2_7nqk_b, sab2_6mqe_h]
+  heldout_cases: [sab2_4hf5_h, sab2_4mwf_h, sab2_5mp6_h, sab2_6cvk_b2]
+
+paths:
+  train_edges: runs/signed_local/edges/train_edges.jsonl
+  heldout_edges: runs/signed_local/edges/heldout_edges.jsonl
+  pairs: runs/native_pool/pairs_train.jsonl
+  weights: runs/next_stage/weights/residue_weights.json

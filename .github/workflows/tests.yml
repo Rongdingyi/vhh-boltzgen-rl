@@ -36,4 +36,8 @@ jobs:
             tests/test_gate_checks.py \
             tests/test_static_eval_rows.py \
             tests/test_cfd2_sampling.py \
-            tests/test_cfd2_graph_conventions.py
+            tests/test_cfd2_graph_conventions.py \
+            tests/test_signed_local_scheduler.py \
+            tests/test_signed_local_edge_orientation.py \
+            tests/test_signed_local_mask.py \
+            tests/test_signed_local_dataset_invariants.py

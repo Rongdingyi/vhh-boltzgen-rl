@@ -14,10 +14,11 @@ from ..native_atom14.reward import make_reward_adapter
 ROOT = Path("/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl")
 
 
-def load_cases(case_ids: list[str]) -> dict[str, RLCase]:
+def load_cases(case_ids: list[str], manifest: Path | None = None) -> dict[str, RLCase]:
     wanted = set(case_ids)
     out = {}
-    for line in (ROOT / "runs/round1_rl_split/rl_manifest_split.jsonl").open():
+    manifest = Path(manifest) if manifest else (ROOT / "runs/round1_rl_split/rl_manifest_split.jsonl")
+    for line in manifest.open():
         row = json.loads(line)
         if row["case_id"] not in wanted:
             continue
@@ -33,8 +34,9 @@ def load_cases(case_ids: list[str]) -> dict[str, RLCase]:
 
 def evaluate(case_ids: list[str], ckpt: Path | None, tag: str, *,
              num_samples: int = 8, sampling_steps: int = 50,
-             seed_offset: int = 800000, run_root: Path | None = None) -> dict:
-    cases = load_cases(case_ids)
+             seed_offset: int = 800000, run_root: Path | None = None,
+             manifest: Path | None = None) -> dict:
+    cases = load_cases(case_ids, manifest=manifest)
     kwargs = dict(sampling_steps=sampling_steps, diffusion_batch_size=num_samples)
     if ckpt is not None:
         kwargs["design_ckpt"] = Path(ckpt)

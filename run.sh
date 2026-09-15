@@ -163,7 +163,39 @@ case "$CMD" in
     run_gate "$ROOT/experiments/cf_dpo_v2/scripts/sbatch_proxy_validation.sh" ;;
   cfd2-report)
     run_gate "$ROOT/experiments/cf_dpo_v2/scripts/sbatch_exp4_report.sh" ;;
+  slcf-build-edges)
+    run_gate env STAGE=build-edges sbatch "$ROOT/experiments/signed_local/scripts/sbatch_cpu.sh" ;;
+  slcf-audit-edges)
+    run_gate env STAGE=audit-edges sbatch "$ROOT/experiments/signed_local/scripts/sbatch_cpu.sh" ;;
+  slcf-protocol)
+    run_gate env STAGE=protocol sbatch "$ROOT/experiments/signed_local/scripts/sbatch_cpu.sh" ;;
+  slcf-report)
+    run_gate env STAGE=report sbatch "$ROOT/experiments/signed_local/scripts/sbatch_cpu.sh" ;;
+  slcf-manifold)
+    run_gate env STAGE=manifold sbatch "$ROOT/experiments/signed_local/scripts/sbatch_gpu.sh" ;;
+  slcf-one-edge)
+    run_gate env STAGE=one-edge sbatch "$ROOT/experiments/signed_local/scripts/sbatch_gpu.sh" ;;
+  slcf-diagnostics)
+    run_gate env STAGE=diagnostics sbatch "$ROOT/experiments/signed_local/scripts/sbatch_gpu.sh" ;;
+  slcf-smoke)
+    run_gate env STAGE=smoke sbatch "$ROOT/experiments/signed_local/scripts/sbatch_gpu.sh" ;;
+  slcf-pilot)
+    run_gate env STAGE=pilot ARM=${2:-main} sbatch "$ROOT/experiments/signed_local/scripts/sbatch_gpu.sh" ;;
+  slcf-pilot-all)
+    for arm in cf local neg main shuffle; do
+      run_gate env STAGE=pilot ARM=$arm sbatch "$ROOT/experiments/signed_local/scripts/sbatch_gpu.sh"
+    done ;;
+  slcf-pilot-eval)
+    run_gate env STAGE=pilot-eval sbatch "$ROOT/experiments/signed_local/scripts/sbatch_gpu.sh" ;;
+  slcf-heldout)
+    run_gate env STAGE=heldout sbatch "$ROOT/experiments/signed_local/scripts/sbatch_gpu.sh" ;;
+  slcf-full)
+    run_gate env STAGE=full ARM=${2:-f1} sbatch "$ROOT/experiments/signed_local/scripts/sbatch_gpu.sh" ;;
+  slcf-full-all)
+    for arm in f0 f1 f2; do
+      run_gate env STAGE=full ARM=$arm sbatch "$ROOT/experiments/signed_local/scripts/sbatch_gpu.sh"
+    done ;;
   *)
-    echo "usage: bash run.sh {audit|baseline|toy-reinforce|toy-grpo|scorer-overfit|evaluate|all-round1|next-*}" >&2
+    echo "usage: bash run.sh {audit|baseline|toy-reinforce|toy-grpo|scorer-overfit|evaluate|all-round1|next-*|cf-opsd-*|cfd2-*|slcf-*}" >&2
     exit 2 ;;
 esac

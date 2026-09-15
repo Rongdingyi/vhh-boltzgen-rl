@@ -64,6 +64,27 @@ def load_conditioning(conditioning_dir: Path, case_id: str) -> dict[str, Any]:
     return payload
 
 
+def load_case_conditioning(case_id: str, conditioning_dir: Path | None = None,
+                           rollout_root: Path | None = None) -> dict[str, Any]:
+    """Exact conditioning for one case.
+
+    Preference order: rollout-captured kwargs (exact for the run layout),
+    then the round-1 conditioning cache.  Shared by all trainers so the
+    conditioning source cannot diverge between branches.
+    """
+    if rollout_root is not None:
+        rollout_dir = Path(rollout_root) / case_id
+        candidates = sorted(rollout_dir.glob("seed*.pt")) if rollout_dir.is_dir() else []
+        if candidates:
+            payload = torch.load(candidates[0], map_location="cpu", weights_only=False)
+            cond = payload.get("cond_kwargs") if isinstance(payload, dict) else None
+            if cond:
+                return cond
+    if conditioning_dir is None:
+        raise FileNotFoundError(f"no conditioning available for {case_id}")
+    return load_conditioning(conditioning_dir, case_id)
+
+
 def _move_value(value: Any, device: str) -> Any:
     if torch.is_tensor(value):
         return value.to(device)

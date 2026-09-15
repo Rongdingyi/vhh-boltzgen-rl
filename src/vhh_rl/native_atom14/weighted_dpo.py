@@ -26,11 +26,9 @@ from .checkpoint import (
     save_native_checkpoint,
     trainable_score_params,
 )
-from .denoise_loss import per_residue_denoising_loss
-from .dpo_loss import diffusion_dpo_loss
 from .dpo_trainer import _load_coords, load_conditioning, move_conditioning
+from .global_cf_step import compute_weighted_cf_dpo_step
 from .masks import design_token_offset, residue_atom_masks
-from .paired_noise import paired_noising
 
 DEVICE = "cuda"
 
@@ -161,41 +159,15 @@ def run_weighted_dpo(
 
         winner = _load_coords(pool_root, pair["winner_sample_id"])
         loser = _load_coords(pool_root, pair["loser_sample_id"])
-        atom_mask = feats["atom_pad_mask"]
-        if atom_mask.dim() > 1:
-            atom_mask = atom_mask.reshape(-1)
-        sigma = policy.structure_module.noise_distribution(1)
-        noise = torch.randn_like(winner.unsqueeze(0))
-        paired = paired_noising(
-            winner, loser, atom_mask, sigma,
-            augmentation=policy.structure_module.coordinate_augmentation,
-            noise=noise,
-        )
 
         optimizer.zero_grad(set_to_none=True)
-        lw_p, _dw = per_residue_denoising_loss(
-            policy.structure_module, feats, paired["x0_w_aug"], paired["x_t_w"],
-            sigma, network_condition_kwargs, residue_masks, require_grad=True,
-        )
-        ll_p, _dl = per_residue_denoising_loss(
-            policy.structure_module, feats, paired["x0_l_aug"], paired["x_t_l"],
-            sigma, network_condition_kwargs, residue_masks, require_grad=True,
-        )
-        lw_r, _ = per_residue_denoising_loss(
-            reference.structure_module, feats, paired["x0_w_aug"], paired["x_t_w"],
-            sigma, network_condition_kwargs, residue_masks, require_grad=False,
-        )
-        ll_r, _ = per_residue_denoising_loss(
-            reference.structure_module, feats, paired["x0_l_aug"], paired["x_t_l"],
-            sigma, network_condition_kwargs, residue_masks, require_grad=False,
-        )
-        lw_loss = (lw_p * w).sum() * policy.structure_module.loss_weight(sigma.reshape(-1))
-        ll_loss = (ll_p * w).sum() * policy.structure_module.loss_weight(sigma.reshape(-1))
-        ref_w_loss = (lw_r * w).sum() * policy.structure_module.loss_weight(sigma.reshape(-1))
-        ref_l_loss = (ll_r * w).sum() * policy.structure_module.loss_weight(sigma.reshape(-1))
-        dpo = diffusion_dpo_loss(lw_loss, ll_loss, ref_w_loss, ref_l_loss, beta)
-        raw_loss = dpo.total_loss
-        sigma_value = float(sigma.reshape(-1).mean())
+        step_out = compute_weighted_cf_dpo_step(
+            policy.structure_module, reference.structure_module, feats,
+            winner, loser, residue_masks, w, network_condition_kwargs, beta=beta)
+        dpo = step_out.dpo
+        raw_loss = step_out.loss
+        lw_loss, ll_loss = step_out.winner_loss, step_out.loser_loss
+        sigma_value = float(step_out.sigma.reshape(-1).mean())
         g_sigma = 1.0
         if temporal == "smooth":
             from vhh_rl.credit.temporal_schedule import g_smooth

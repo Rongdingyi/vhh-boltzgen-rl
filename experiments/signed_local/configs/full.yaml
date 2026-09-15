@@ -1,0 +1,39 @@
+method: sl_cf_dpo
+
+base:
+  checkpoint: /share/home/rongdingyi/programs/proteingen/boltzgen/ckpts/boltzgen1_diverse.ckpt
+
+global:
+  method: existing_cf_dpo
+  eta: 0.75
+  beta: 10.0
+
+local:
+  classes: [both_negative, sign_flip]
+  beta: 10.0
+  use_reward_magnitude: false
+  mask: target_residue_fake_atoms
+
+reward_tolerance: 0.05
+global_eta: 0.75
+beta_global: 10.0
+beta_local: 10.0
+
+schedule:
+  global_steps_per_cycle: 3
+  local_steps_per_cycle: 1
+
+train:
+  updates: 500
+  checkpoint_every: 100
+  lr: 1.0e-5
+  seed: 20260915
+
+local_sampling:
+  case_balanced: true
+  class_balanced: true
+  sign_flip_context_balanced: true
+
+geometry:
+  require_exact_decode: true
+  require_fr_match: true
