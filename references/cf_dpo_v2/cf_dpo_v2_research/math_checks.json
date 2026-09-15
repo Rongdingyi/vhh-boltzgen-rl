@@ -1,0 +1,47 @@
+{
+  "status": "passed",
+  "type": "exact finite-state arithmetic checks, not protein experiments",
+  "sign_reversal_example": {
+    "reward_table": {
+      "00": 0,
+      "01": 2,
+      "10": 2,
+      "11": 1
+    },
+    "drop": [
+      -1.0,
+      -1.0
+    ],
+    "gain": [
+      2.0,
+      2.0
+    ],
+    "average_credit": [
+      0.5,
+      0.5
+    ],
+    "conservative_credit": [
+      0.0,
+      0.0
+    ],
+    "endpoint_residual": 0.0
+  },
+  "high_order_cancellation": {
+    "function": "10 z1 + z1 z2 z3 - z1 z2 z4",
+    "endpoint_residual": 0.0,
+    "has_nonzero_third_order_terms": true
+  },
+  "ideal_distribution_checks": {
+    "objective_gap_error": 5.551115123125783e-17,
+    "kl_chain_error": 1.3877787807814457e-16,
+    "marginal_ratio_max_error": 1.8041124150158794e-16,
+    "reverse_conditional_kl_max_error": 1.6653345369377348e-16,
+    "forward_conditional_kl_max_error": 1.6653345369377348e-16,
+    "graph_potential_fit_error": 1.27675647831893e-15,
+    "graph_recovered_distribution_max_error": 3.469446951953614e-17
+  },
+  "limits": [
+    "Density ratios in these checks are exact. Native BoltzGen denoising errors are not exact log densities.",
+    "Finite-state enumeration does not demonstrate native conditional sampling feasibility or improved protein generation."
+  ]
+}

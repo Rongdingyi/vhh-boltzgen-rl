@@ -1,0 +1,165 @@
+{
+  "inputs": {
+    "credit_csv": "/mnt/data/research_audit/next_stage_credit_report/next_stage_credit_report/data/counterfactual/residue_credit.csv",
+    "credit_sha256": "c8a1b01abfbaf45e7040d36dea9927973a31f0be1963eb45d1fad73fbb827305",
+    "pair_csv": "/mnt/data/research_audit/next_stage_credit_report/next_stage_credit_report/data/counterfactual/pair_credit_summary.csv",
+    "pair_sha256": "6a8e71aa4da4491c879277914ae3934214e366b1ff44041339bb5aa1eb3e0454"
+  },
+  "n_pairs": 192,
+  "n_cases": 24,
+  "n_differing_residue_events": 2996,
+  "sign_counts": [
+    {
+      "tolerance": 0.0,
+      "category": "both_positive",
+      "count": 1375,
+      "fraction": 0.4589452603471295,
+      "n_pairs": 192
+    },
+    {
+      "tolerance": 0.0,
+      "category": "both_negative",
+      "count": 540,
+      "fraction": 0.1802403204272363,
+      "n_pairs": 173
+    },
+    {
+      "tolerance": 0.0,
+      "category": "context_sign_flip",
+      "count": 1081,
+      "fraction": 0.3608144192256342,
+      "n_pairs": 188
+    },
+    {
+      "tolerance": 0.0,
+      "category": "near_zero_or_small",
+      "count": 0,
+      "fraction": 0.0,
+      "n_pairs": 0
+    },
+    {
+      "tolerance": 1e-06,
+      "category": "both_positive",
+      "count": 1375,
+      "fraction": 0.4589452603471295,
+      "n_pairs": 192
+    },
+    {
+      "tolerance": 1e-06,
+      "category": "both_negative",
+      "count": 540,
+      "fraction": 0.1802403204272363,
+      "n_pairs": 173
+    },
+    {
+      "tolerance": 1e-06,
+      "category": "context_sign_flip",
+      "count": 1081,
+      "fraction": 0.3608144192256342,
+      "n_pairs": 188
+    },
+    {
+      "tolerance": 1e-06,
+      "category": "near_zero_or_small",
+      "count": 0,
+      "fraction": 0.0,
+      "n_pairs": 0
+    },
+    {
+      "tolerance": 0.05,
+      "category": "both_positive",
+      "count": 1317,
+      "fraction": 0.4395861148197597,
+      "n_pairs": 192
+    },
+    {
+      "tolerance": 0.05,
+      "category": "both_negative",
+      "count": 484,
+      "fraction": 0.16154873164218958,
+      "n_pairs": 171
+    },
+    {
+      "tolerance": 0.05,
+      "category": "context_sign_flip",
+      "count": 996,
+      "fraction": 0.3324432576769025,
+      "n_pairs": 187
+    },
+    {
+      "tolerance": 0.05,
+      "category": "near_zero_or_small",
+      "count": 199,
+      "fraction": 0.0664218958611482,
+      "n_pairs": 113
+    },
+    {
+      "tolerance": 0.1,
+      "category": "both_positive",
+      "count": 1253,
+      "fraction": 0.4182242990654206,
+      "n_pairs": 192
+    },
+    {
+      "tolerance": 0.1,
+      "category": "both_negative",
+      "count": 442,
+      "fraction": 0.14753004005340453,
+      "n_pairs": 168
+    },
+    {
+      "tolerance": 0.1,
+      "category": "context_sign_flip",
+      "count": 904,
+      "fraction": 0.30173564753004006,
+      "n_pairs": 185
+    },
+    {
+      "tolerance": 0.1,
+      "category": "near_zero_or_small",
+      "count": 397,
+      "fraction": 0.13251001335113485,
+      "n_pairs": 158
+    }
+  ],
+  "better_than_winner_reversions": [
+    {
+      "tolerance": 0.0,
+      "improving_queries": 1092,
+      "pairs_with_better_than_winner": 191
+    },
+    {
+      "tolerance": 0.05,
+      "improving_queries": 1020,
+      "pairs_with_better_than_winner": 190
+    },
+    {
+      "tolerance": 0.1,
+      "improving_queries": 951,
+      "pairs_with_better_than_winner": 187
+    }
+  ],
+  "loser_mutation_beats_winner_tol005": {
+    "queries": 8,
+    "pairs": 7
+  },
+  "best_reversion_gain_per_pair": {
+    "mean": 1.6354389773720566,
+    "median": 1.3486061096191406,
+    "q25": 0.7627551555633545,
+    "q75": 2.1589505672454834,
+    "max": 7.323044061660767
+  },
+  "median_top30_mass": {
+    "positive_conservative": 0.940071105755063,
+    "absolute_average": 0.6647506646149679,
+    "absolute_drop": 0.666388911258197,
+    "absolute_gain": 0.6597367081975074
+  },
+  "interpretation_limits": [
+    "All effects are of the fixed classifier on selected training pairs, not biological causal effects.",
+    "0.05 and 0.1 are diagnostic tolerances, not biological thresholds.",
+    "94% is mass of clipped conservative-positive credit, not explained total reward gap.",
+    "These are audits of existing CSV data, not additional protein-model experiments."
+  ]
+}
