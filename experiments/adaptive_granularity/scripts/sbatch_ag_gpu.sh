@@ -12,7 +12,7 @@ ROOT=/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl
 export PYTHONPATH="$ROOT/src:/share/home/rongdingyi/programs/proteingen/boltzgen/src"
 export HF_HUB_OFFLINE=1 LAYERNORM_TYPE=torch CUBLAS_WORKSPACE_CONFIG=:4096:8
 PY=/share/home/rongdingyi/.conda/envs/vhh-guidance/bin/python
-STAGE=${STAGE:?set STAGE=pilot|pilot-eval|gradient-conflict|full|full-eval|full-seeds}
+STAGE=${STAGE:?set STAGE=pilot|pilot-eval|pilot-3seed|pilot-3seed-eval|gradient-conflict|full|full-eval|full-seeds}
 cd "$ROOT/experiments/adaptive_granularity/scripts"
 case "$STAGE" in
   pilot)
@@ -21,6 +21,15 @@ case "$STAGE" in
   pilot-eval)
     ARMS_ARG=""; [ -n "${ARMS:-}" ] && ARMS_ARG="--arms $ARMS"
     $PY -u eval_pilot.py $ARMS_ARG ;;
+  pilot-3seed)
+    SEEDS=${SEEDS:-42 43 44}
+    for arm in current adaptive; do
+      for seed in $SEEDS; do
+        $PY -u train_pilot.py --arm "$arm" --seed "$seed" --steps 100
+      done
+    done ;;
+  pilot-3seed-eval)
+    $PY -u eval_3seed.py ;;
   gradient-conflict)
     $PY -u gradient_conflict_audit.py ;;
   full)

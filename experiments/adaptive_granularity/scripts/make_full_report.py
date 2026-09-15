@@ -7,6 +7,8 @@ from pathlib import Path
 import _common as C  # noqa: E402
 
 DOC = C.ROOT / "docs/adaptive_granularity/AG_FULL.md"
+GATE_FULL = C.FULL_DIR / "gate_full.json"
+GATE_MULTISEED = C.FULL_DIR / "gate_multiseed.json"
 
 
 def main() -> None:
@@ -26,6 +28,10 @@ def main() -> None:
                      f"{selected['reward_mean'] - base:+.3f} | {selected['invalid']} | "
                      f"{selected['valid']} |")
     gate = _gate(payload)
+    gate_multi = _gate_multiseed(payload)
+    GATE_FULL.parent.mkdir(parents=True, exist_ok=True)
+    GATE_FULL.write_text(json.dumps(gate, indent=1))
+    GATE_MULTISEED.write_text(json.dumps(gate_multi, indent=1))
     DOC.parent.mkdir(parents=True, exist_ok=True)
     DOC.write_text(f"""# AG-CF-DPO Full（task book §57-§66）
 
@@ -67,10 +73,35 @@ def _gate(payload: dict) -> dict:
     passed = (d_cf >= 0.50 and wins >= 6
               and d_shuffle is not None and d_shuffle > 0
               and d_elig is not None and d_elig > 0)
-    return {"verdict": "MULTISEED_OK" if passed else "NOT_PASSED",
+    return {"verdict": "FULL_GO" if passed else "NOT_PASSED",
+            "stage": "single_seed_full",
+            "criterion": "Adaptive-CF >= +0.50, >=6/8 cases not worse, "
+                         "Adaptive > Shuffle, Adaptive > Eligible-CF",
             "delta_vs_current": d_cf, "cases_not_worse_vs_current": wins,
             "delta_vs_shuffle": d_shuffle, "delta_vs_eligible_cf": d_elig,
             "base": base}
+
+
+def _gate_multiseed(payload: dict) -> dict:
+    """True 3-seed full gate (§62); only runs after FULL_GO."""
+    seeds = [42, 43, 44]
+    deltas = {}
+    for seed in seeds:
+        current = payload.get(f"f0_seed{seed}", {}).get("selected")
+        adaptive = payload.get(f"f2_seed{seed}", {}).get("selected")
+        if not current or not adaptive:
+            continue
+        deltas[seed] = adaptive["reward_mean"] - current["reward_mean"]
+    if not deltas:
+        return {"verdict": "NOT_RUN", "stage": "full_multiseed"}
+    mean_delta = sum(deltas.values()) / len(deltas)
+    non_negative = sum(1 for d in deltas.values() if d >= -1e-9)
+    passed = mean_delta >= 0.50 and non_negative == len(deltas)
+    return {"verdict": "MULTISEED_GO" if passed else "NOT_PASSED",
+            "stage": "full_multiseed",
+            "criterion": "mean(Adaptive-CF) >= +0.50 and 3/3 non-negative",
+            "mean_delta": mean_delta, "delta_per_seed": deltas,
+            "seeds_non_negative": non_negative, "n_seeds": len(deltas)}
 
 
 if __name__ == "__main__":

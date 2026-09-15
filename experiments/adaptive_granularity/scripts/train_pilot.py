@@ -84,8 +84,11 @@ def _materialize_current_cf(pairs: list[dict]) -> tuple[Path, Path]:
     return pairs_path, weights_path
 
 
-def arm_output_dir(arm: str) -> Path:
-    return C.PILOT_DIR / arm
+def arm_output_dir(arm: str, seed: int = SEED) -> Path:
+    """Primary seed keeps pilot/<arm>; confirmation seeds are isolated."""
+    if seed == SEED:
+        return C.PILOT_DIR / arm
+    return C.PILOT_DIR / f"seed{seed}" / arm
 
 
 def main() -> None:

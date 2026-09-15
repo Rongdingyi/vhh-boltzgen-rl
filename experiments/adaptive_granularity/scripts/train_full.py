@@ -17,6 +17,7 @@ ARMS = {
 STEPS = 500
 SEED = 20260913
 GATE_C = C.PILOT_DIR / "gate_c.json"
+GATE_FULL = C.FULL_DIR / "gate_full.json"
 
 
 def require_gate_c(override: str | None) -> None:
@@ -32,6 +33,20 @@ def require_gate_c(override: str | None) -> None:
         "Pass --override-gate REASON for a deliberate manual override.")
 
 
+def require_gate_full(override: str | None) -> None:
+    """Multi-seed full runs require the single-seed FULL_GO gate (§61/§62)."""
+    payload = json.loads(GATE_FULL.read_text()) if GATE_FULL.is_file() else None
+    if payload and payload.get("verdict") == "FULL_GO":
+        return
+    if override:
+        print(f"[warn] Gate FULL override: {override}", flush=True)
+        return
+    raise SystemExit(
+        f"Full multi-seed blocked: {GATE_FULL} is not FULL_GO. "
+        "Run single-seed full + make_full_report first, or pass "
+        "--override-gate REASON.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--arm", required=True, choices=list(ARMS))
@@ -43,7 +58,10 @@ def main() -> None:
                         help="reason string; deliberate manual override only")
     args = parser.parse_args()
     spec = ARMS[args.arm]
-    require_gate_c(args.override_gate)
+    if args.seed == SEED:
+        require_gate_c(args.override_gate)
+    else:
+        require_gate_full(args.override_gate)
     if spec["kind"] == "current_cf":
         pairs_path, weights_path, variant = C.PAIRS, C.CURRENT_WEIGHTS, "cf"
     elif spec["kind"] == "eligible_cf":

@@ -128,6 +128,66 @@ def test_gate_b_override_is_explicit(tmp_path, monkeypatch):
     train_pilot.require_gate_b("manual smoke only")   # must not raise
 
 
+def test_seed_specific_output_dirs_do_not_collide():
+    primary = train_pilot.arm_output_dir("current")
+    seed42 = train_pilot.arm_output_dir("current", 42)
+    assert primary != seed42
+    assert seed42.parent.name == "seed42"
+    assert train_pilot.arm_output_dir("adaptive", 43).name == "adaptive"
+    assert train_pilot.arm_output_dir("adaptive", 43).parent.name == "seed43"
+
+
+def test_three_seed_confirm_rule():
+    import eval_3seed
+    go = eval_3seed.confirm_verdict({42: 0.40, 43: 0.35, 44: 0.20})
+    assert go["verdict"] == "GO"                          # mean 0.317, 3/3
+    assert go["seeds_adaptive_ge_cf"] == 3
+    two_of_three = eval_3seed.confirm_verdict({42: 0.9, 43: 0.1, 44: -0.05})
+    assert two_of_three["verdict"] == "GO"                # mean 0.317, 2/3
+    assert two_of_three["seeds_adaptive_ge_cf"] == 2
+    marginal = eval_3seed.confirm_verdict({42: 0.25, 43: 0.20, 44: 0.30})
+    assert marginal["verdict"] == "NO_GO"                 # mean < +0.30
+    one_positive = eval_3seed.confirm_verdict({42: 1.5, 43: -0.5, 44: -0.1})
+    assert one_positive["verdict"] == "NO_GO"             # mean ok, 1/3 non-negative
+    assert eval_3seed.confirm_verdict({})["verdict"] == "NOT_RUN"
+
+
+def test_full_multiseed_guard_requires_full_go(tmp_path, monkeypatch):
+    import train_full
+    monkeypatch.setattr(train_full, "GATE_FULL", tmp_path / "gate_full.json")
+    with pytest.raises(SystemExit):
+        train_full.require_gate_full(None)
+    (tmp_path / "gate_full.json").write_text(json.dumps({"verdict": "NOT_PASSED"}))
+    with pytest.raises(SystemExit):
+        train_full.require_gate_full(None)
+    (tmp_path / "gate_full.json").write_text(json.dumps({"verdict": "FULL_GO"}))
+    train_full.require_gate_full(None)
+
+
+def test_full_report_gate_names(tmp_path, monkeypatch):
+    import make_full_report
+    base_cases = {c: 0.0 for c in C.heldout8()}
+    payload = {
+        "base": {"reward_mean": 0.0},
+        "f0_seed20260913": {"selected": {"reward_mean": 1.0, "per_case": base_cases,
+                                         "invalid": 0, "valid": True}},
+        "f2_seed20260913": {"selected": {"reward_mean": 1.6, "per_case": base_cases,
+                                         "invalid": 0, "valid": True}},
+        "f3_seed20260913": {"selected": {"reward_mean": 0.5, "per_case": base_cases,
+                                         "invalid": 0, "valid": True}},
+        "f4_seed20260913": {"selected": {"reward_mean": 0.5, "per_case": base_cases,
+                                         "invalid": 0, "valid": True}},
+    }
+    assert make_full_report._gate(payload)["verdict"] == "FULL_GO"
+    assert make_full_report._gate_multiseed(payload)["verdict"] == "NOT_RUN"
+    for seed in (42, 43, 44):
+        payload[f"f0_seed{seed}"] = {"selected": {"reward_mean": 1.0}}
+        payload[f"f2_seed{seed}"] = {"selected": {"reward_mean": 1.6}}
+    multi = make_full_report._gate_multiseed(payload)
+    assert multi["verdict"] == "MULTISEED_GO"
+    assert multi["seeds_non_negative"] == 3
+
+
 def test_gate_c_guard_requires_strong_go(tmp_path, monkeypatch):
     import train_full
     monkeypatch.setattr(train_full, "GATE_C", tmp_path / "gate_c.json")

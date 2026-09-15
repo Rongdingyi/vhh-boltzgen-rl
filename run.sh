@@ -215,6 +215,10 @@ case "$CMD" in
     run_gate env STAGE=pilot ARM=region sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
   ag-pilot-eval)
     run_gate env STAGE=pilot-eval sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
+  ag-pilot-3seed)
+    run_gate env STAGE=pilot-3seed sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
+  ag-pilot-3seed-eval)
+    run_gate env STAGE=pilot-3seed-eval sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
   ag-pilot-pre-report)
     run_gate env STAGE=pre-report sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_cpu.sh" ;;
   ag-pilot-adaptive)
