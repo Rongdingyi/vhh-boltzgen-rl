@@ -39,7 +39,8 @@ case "$STAGE" in
     $PY -u "$ROOT/experiments/signed_local/scripts/build_heldout_edges.py"
     $PY -u "$ROOT/experiments/signed_local/scripts/eval_local_preference.py" ;;
   preference)
-    $PY -u "$ROOT/experiments/signed_local/scripts/eval_local_preference.py" ;;
+    SEEDS_ARG=""; [ -n "${SEEDS:-}" ] && SEEDS_ARG="--seeds $SEEDS"
+    $PY -u "$ROOT/experiments/signed_local/scripts/eval_local_preference.py" $SEEDS_ARG ;;
   full)
     ARM=${ARM:?set ARM=f0|f1|f2|f3}
     $PY -u "$ROOT/experiments/signed_local/scripts/train_full.py" --arm "$ARM" ;;
