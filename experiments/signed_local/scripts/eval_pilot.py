@@ -30,7 +30,11 @@ def main() -> None:
             continue
         results[arm] = evaluate_reward(ckpt, HELDOUT, f"slcf_{arm}",
                                        run_root=out_dir / f"eval_{arm}")
-    (out_dir / "pilot_eval.json").write_text(json.dumps(results, indent=1))
+    merged_path = out_dir / "pilot_eval.json"
+    merged = json.loads(merged_path.read_text()) if merged_path.is_file() else {}
+    merged.update(results)
+    merged_path.write_text(json.dumps(merged, indent=1))
+    results = merged
     print(json.dumps({k: v.get("reward_mean") for k, v in results.items()}, indent=1))
 
 
