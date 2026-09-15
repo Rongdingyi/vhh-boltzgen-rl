@@ -207,6 +207,14 @@ def _counts(rows: list[dict], key: str) -> dict:
     return dict(out)
 
 
+def _boxplot(ax, data, names) -> None:
+    """Portable boxplot: matplotlib >= 3.9 renamed ``labels`` to ``tick_labels``."""
+    try:
+        ax.boxplot(data, tick_labels=names)
+    except TypeError:
+        ax.boxplot(data, labels=names)
+
+
 def _figures(region_rows, pair_rows, adaptive_modes) -> None:
     import matplotlib
     matplotlib.use("Agg")
@@ -231,8 +239,8 @@ def _figures(region_rows, pair_rows, adaptive_modes) -> None:
     for row in region_rows:
         by_region[row["region"]].append(row["rho_positive"])
     fig, ax = plt.subplots(figsize=(5, 3.2))
-    ax.boxplot([by_region[r] for r in sorted(by_region)],
-               labels=sorted(by_region))
+    names = sorted(by_region)
+    _boxplot(ax, [by_region[r] for r in names], names)
     ax.axhline(0.70, color="r", ls=":", label="rho=0.70")
     ax.set_ylabel("rho_positive")
     ax.legend(fontsize=7)
@@ -271,7 +279,7 @@ def _figures(region_rows, pair_rows, adaptive_modes) -> None:
     data = [[r["epistasis_cons"] for r in region_rows
              if r["rescue_class"].startswith(r_[:6]) and r["epistasis_cons"] is not None]
             for r_ in ("residue_candidate", "coarse_rescue", "abstain")]
-    ax.boxplot(data, labels=["residue", "region", "abstain"])
+    _boxplot(ax, data, ["residue", "region", "abstain"])
     ax.set_ylabel("epistasis_cons")
     fig.tight_layout()
     fig.savefig(C.AUDIT_DIR / "figures/fig5_epistasis_mode.png", dpi=150)
