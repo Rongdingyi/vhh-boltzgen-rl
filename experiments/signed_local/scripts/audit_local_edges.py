@@ -16,6 +16,9 @@ def main() -> None:
     parser.add_argument("--split", default="train")
     args = parser.parse_args()
     report = validate_dataset(args.edges, split=args.split)
+    out = ROOT / "runs/signed_local/edge_validation.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, indent=1))
     print(json.dumps(report, indent=1))
 
 
