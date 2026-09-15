@@ -33,7 +33,12 @@ def local_preference_accuracy(base_checkpoint, ckpt: Path | None, edges_path,
                               *, beta: float = 10.0, n_sigma: int = 8,
                               seed: int = 12345, cond_dir: Path | None = None,
                               rollout_root: Path | None = None) -> dict:
-    """Fraction of held-out local edges with z > 0 (policy prefers the scorer's side)."""
+    """Fraction of held-out local edges with z > 0 (policy prefers the scorer's side).
+
+    The sigma/noise draws come from the torch RNG, so the seed must be set on
+    torch as well (frozen-protocol requirement).
+    """
+    torch.manual_seed(seed)
     rng = random.Random(seed)
     design_positions = _load_design_positions(
         ROOT / "runs/round1_rl_split/rl_manifest_split.jsonl")
