@@ -28,8 +28,8 @@ def resolve_arm_paths(arm: str):
     """(pairs_path, weights_path, trainer variant) for one pilot arm."""
     spec = ARMS[arm]
     if spec["kind"] == "current_cf":
-        return (C.PILOT_DIR / "current/pairs_pilot4.jsonl",
-                C.PILOT_DIR / "current/weights_pilot4.json", "cf")
+        return (C.WEIGHTS_DIR / "pairs_current_cf_pilot4.jsonl",
+                C.WEIGHTS_DIR / "current_cf_pilot4_weights.json", "cf")
     if spec["kind"] == "eligible_cf":
         return (C.WEIGHTS_DIR / "pairs_adaptive_eligible_cf_pilot4.jsonl",
                 C.CURRENT_WEIGHTS, "cf")
@@ -65,20 +65,27 @@ def require_gate_b(override: str | None) -> None:
 
 
 def _materialize_current_cf(pairs: list[dict]) -> tuple[Path, Path]:
-    """Filtered current-CF pilot support (same protocol as cf_dpo_mini, §30)."""
-    out_dir = C.PILOT_DIR / "current"
-    out_dir.mkdir(parents=True, exist_ok=True)
+    """Filtered current-CF pilot support (same protocol as cf_dpo_mini, §30).
+
+    Inputs live under WEIGHTS_DIR, training output under PILOT_DIR/<arm>:
+    the run-dir cleanup must never delete its own inputs (review P0).
+    """
+    C.WEIGHTS_DIR.mkdir(parents=True, exist_ok=True)
     keep = set(C.PILOT_TRAIN_CASES)
     pilot_pairs = [p for p in pairs if p["case_id"] in keep]
     weights_all = C.load_current_weights()
     weights = {"eta": weights_all.get("eta", 0.75), "seed": weights_all.get("seed"),
                "pairs": {k: v for k, v in weights_all["pairs"].items()
                          if v["case_id"] in keep}}
-    pairs_path = out_dir / "pairs_pilot4.jsonl"
-    weights_path = out_dir / "weights_pilot4.json"
+    pairs_path = C.WEIGHTS_DIR / "pairs_current_cf_pilot4.jsonl"
+    weights_path = C.WEIGHTS_DIR / "current_cf_pilot4_weights.json"
     pairs_path.write_text("".join(json.dumps(p) + "\n" for p in pilot_pairs))
     weights_path.write_text(json.dumps(weights, indent=1))
     return pairs_path, weights_path
+
+
+def arm_output_dir(arm: str) -> Path:
+    return C.PILOT_DIR / arm
 
 
 def main() -> None:
@@ -111,7 +118,7 @@ def main() -> None:
 
     from vhh_rl.native_atom14.weighted_dpo import run_weighted_dpo
 
-    out_dir = C.PILOT_DIR / args.arm
+    out_dir = arm_output_dir(args.arm)
     shutil.rmtree(out_dir, ignore_errors=True)   # no mixed old/new logs (review 6)
     summary = run_weighted_dpo(
         base_checkpoint=C.BASE_CKPT,

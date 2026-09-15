@@ -35,11 +35,51 @@ def test_simple_arms_resolve_to_variant_names():
         assert weights_path.name == "ag_weights.json"
 
 
-def test_current_arm_resolves_to_own_materialization():
+def test_current_arm_resolves_to_weight_inputs():
     pairs_path, weights_path, variant = train_pilot.resolve_arm_paths("current")
     assert variant == "cf"
-    assert pairs_path.parent.name == "current"
-    assert weights_path.parent.name == "current"
+    assert pairs_path.parent == C.WEIGHTS_DIR
+    assert weights_path.parent == C.WEIGHTS_DIR
+    assert pairs_path.name == "pairs_current_cf_pilot4.jsonl"
+    assert weights_path.name == "current_cf_pilot4_weights.json"
+
+
+def test_current_pilot_inputs_survive_output_cleanup(tmp_path, monkeypatch):
+    """P0 regression: materialize -> rmtree(output dir) -> trainer reopen.
+
+    Inputs must live outside the training output directory.
+    """
+    import shutil
+
+    weights_dir = tmp_path / "weights"
+    pilot_dir = tmp_path / "pilot"
+    monkeypatch.setattr(C, "WEIGHTS_DIR", weights_dir)
+    monkeypatch.setattr(C, "PILOT_DIR", pilot_dir)
+    monkeypatch.setattr(C, "PILOT_TRAIN_CASES", ["case_a"])
+    monkeypatch.setattr(C, "load_current_weights", lambda: {
+        "eta": 0.75, "seed": 1,
+        "pairs": {"case_a:w:l": {"case_id": "case_a", "cf": {"10": 1.0}},
+                  "case_b:w:l": {"case_id": "case_b", "cf": {"11": 1.0}}},
+    })
+    pairs = [{"case_id": "case_a", "winner_sample_id": "w", "loser_sample_id": "l"},
+             {"case_id": "case_b", "winner_sample_id": "w", "loser_sample_id": "l"}]
+
+    pairs_path, weights_path = train_pilot._materialize_current_cf(pairs)
+    assert pairs_path == C.WEIGHTS_DIR / "pairs_current_cf_pilot4.jsonl"
+    assert weights_path == C.WEIGHTS_DIR / "current_cf_pilot4_weights.json"
+    assert pairs_path.is_file() and weights_path.is_file()
+
+    out_dir = train_pilot.arm_output_dir("current")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "train_metrics.jsonl").write_text("old\n")
+    shutil.rmtree(out_dir, ignore_errors=True)      # production cleanup
+
+    assert pairs_path.is_file(), "current-CF pairs input was deleted by cleanup"
+    assert weights_path.is_file(), "current-CF weights input was deleted by cleanup"
+    rows = [json.loads(l) for l in pairs_path.open()]
+    assert {r["case_id"] for r in rows} == {"case_a"}
+    weights = json.loads(weights_path.read_text())
+    assert set(weights["pairs"]) == {"case_a:w:l"}
 
 
 def _summary(rewards: dict[str, float]) -> dict:
