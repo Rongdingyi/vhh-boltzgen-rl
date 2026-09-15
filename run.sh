@@ -195,7 +195,47 @@ case "$CMD" in
     for arm in f0 f1 f2; do
       run_gate env STAGE=full ARM=$arm sbatch "$ROOT/experiments/signed_local/scripts/sbatch_gpu.sh"
     done ;;
+  ag-freeze)
+    run_gate env STAGE=freeze sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_cpu.sh" ;;
+  ag-audit)
+    run_gate env STAGE=audit sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_cpu.sh" ;;
+  ag-build-weights)
+    run_gate env STAGE=build-weights sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_cpu.sh" ;;
+  ag-validate-weights)
+    run_gate env STAGE=validate-weights sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_cpu.sh" ;;
+  ag-smoke)
+    run_gate env STAGE=smoke sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_cpu.sh" ;;
+  ag-pilot-current)
+    run_gate env STAGE=pilot ARM=current sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
+  ag-pilot-nofloor)
+    run_gate env STAGE=pilot ARM=nofloor sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
+  ag-pilot-strict)
+    run_gate env STAGE=pilot ARM=strict sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
+  ag-pilot-region)
+    run_gate env STAGE=pilot ARM=region sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
+  ag-pilot-eval)
+    run_gate env STAGE=pilot-eval sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
+  ag-pilot-pre-report)
+    run_gate env STAGE=pre-report sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_cpu.sh" ;;
+  ag-pilot-adaptive)
+    run_gate env STAGE=pilot ARM=adaptive sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
+  ag-pilot-shuffle)
+    run_gate env STAGE=pilot ARM=shuffle sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
+  ag-pilot-eligible-cf)
+    run_gate env STAGE=pilot ARM=eligible-cf sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
+  ag-gradient-conflict-audit)
+    run_gate env STAGE=gradient-conflict sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
+  ag-pilot-report)
+    run_gate env STAGE=report sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_cpu.sh" ;;
+  ag-full)
+    run_gate env STAGE=full ARM=${2:-f2} sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
+  ag-full-eval)
+    run_gate env STAGE=full-eval sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
+  ag-full-seeds)
+    run_gate env STAGE=full-seeds sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
+  ag-full-report)
+    run_gate env STAGE=full-report sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_cpu.sh" ;;
   *)
-    echo "usage: bash run.sh {audit|baseline|toy-reinforce|toy-grpo|scorer-overfit|evaluate|all-round1|next-*|cf-opsd-*|cfd2-*|slcf-*}" >&2
+    echo "usage: bash run.sh {audit|baseline|toy-reinforce|toy-grpo|scorer-overfit|evaluate|all-round1|next-*|cf-opsd-*|cfd2-*|slcf-*|ag-*}" >&2
     exit 2 ;;
 esac

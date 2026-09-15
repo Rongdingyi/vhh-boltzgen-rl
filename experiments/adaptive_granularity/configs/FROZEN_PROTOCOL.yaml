@@ -1,0 +1,62 @@
+version: 1
+method: ag_cf_dpo
+repo_commit: 9545a6770fe6ec459859b4659b450716e2cf49c1
+boltzgen_commit: a3149cf18eeb58648d1abbb27539bd73f746cdda
+base_checkpoint_sha256: 360af8bd6e59527ff6ec25dd81253967f3bd3567d200053b10680634751f8e3c
+pairs_train_sha256: fd9776fd8e82d2be57904b5f82ddd84cbfae4831d27e8ac54eb2713aae338b39
+residue_credit_sha256: c8a1b01abfbaf45e7040d36dea9927973a31f0be1963eb45d1fad73fbb827305
+region_credit_sha256: 028ba1f419c4438f971c9e924d9fa1cd39dd7d7b0b37cdac441eb390cdf064a9
+current_residue_weights_sha256: b5d1cbe95e75e99593850627edfe82f2f69f5d531242d5ca03b16192e89448d3
+train_cases:
+- sab2_1acy_h
+- sab2_2f58_h
+- sab2_4i1n_b
+- sab2_4r2g_d
+- sab2_4xmp_h
+- sab2_5vxk_b
+- sab2_6mqe_h
+- sab2_6p4b_b
+- sab2_6u52_c
+- sab2_7jkt_h
+- sab2_7nqk_b
+- sab2_7qxd_kkk
+- sab2_7sl5_d
+- sab2_7x7d_b
+- sab2_8bcz_h
+- sab2_8c3k_b
+- sab2_8en1_d
+- sab2_8en5_e
+- sab2_8gb6_h
+- sab2_8k33_b
+- sab2_8pnu_d
+- sab2_8rz0_f1
+- sab2_9b6s_h
+- sab2_9ubr_g
+pilot_train_cases:
+- sab2_6u52_c
+- sab2_7sl5_d
+- sab2_7nqk_b
+- sab2_6mqe_h
+heldout4_cases:
+- sab2_4hf5_h
+- sab2_4mwf_h
+- sab2_5mp6_h
+- sab2_6cvk_b2
+heldout8_cases:
+- sab2_4hf5_h
+- sab2_4mwf_h
+- sab2_5mp6_h
+- sab2_6cvk_b2
+- sab2_6e62_b
+- sab2_6oq8_d
+- sab2_6s2i_a
+- sab2_8dpm_d
+beta: 10.0
+lr: 1.0e-05
+eta_current: 0.75
+tol: 0.05
+rho_threshold: 0.7
+eval_seeds: case.seed_base + 800000 (8 samples/case, 50 steps)
+pilot_updates: 100
+full_updates: 500
+train_seed: 20260913

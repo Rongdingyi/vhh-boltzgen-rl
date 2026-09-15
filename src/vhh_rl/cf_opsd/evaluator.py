@@ -62,6 +62,7 @@ def evaluate(case_ids: list[str], ckpt: Path | None, tag: str, *,
         mean = sum(rewards) / len(rewards) if rewards else None
         out["cases"][cid] = {"n": len(capture.samples), "n_scored": len(rewards),
                              "n_invalid": n_invalid, "n_fr_mismatch": n_fr,
+                             "n_unique": len(set(seqs)),
                              "reward_mean": mean}
         print(f"[{tag}] {cid}: reward={mean}", flush=True)
     reward.close()

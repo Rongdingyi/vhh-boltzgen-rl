@@ -1,0 +1,34 @@
+method: ag_cf_dpo
+
+base:
+  checkpoint: /share/home/rongdingyi/programs/proteingen/boltzgen/ckpts/boltzgen1_diverse.ckpt
+
+protocol:
+  tol: 0.05
+  rho: 0.70
+  eta_current: 0.75
+  beta: 10.0
+  lr: 1.0e-5
+  updates: 100
+  seed: 20260913
+  checkpoint_every: 50
+
+train_cases: [sab2_6u52_c, sab2_7sl5_d, sab2_7nqk_b, sab2_6mqe_h]
+heldout4: [sab2_4hf5_h, sab2_4mwf_h, sab2_5mp6_h, sab2_6cvk_b2]
+heldout8_all_test: true
+
+eval:
+  num_samples: 8
+  sampling_steps: 50
+  seed_offset: 800000
+
+arms:
+  - current
+  - nofloor
+  - strict
+  - region
+  - adaptive
+  - shuffle
+  - eligible-cf
+
+trainer: vhh_rl.native_atom14.weighted_dpo.run_weighted_dpo

@@ -1,0 +1,30 @@
+method: ag_cf_dpo
+phase: full
+
+base:
+  checkpoint: /share/home/rongdingyi/programs/proteingen/boltzgen/ckpts/boltzgen1_diverse.ckpt
+
+protocol:
+  tol: 0.05
+  rho: 0.70
+  beta: 10.0
+  lr: 1.0e-5
+  updates: 500
+  checkpoint_candidates: [100, 200, 300, 400, 500]
+  seed: 20260913
+  train_cases: all_24
+
+checkpoint_selection: held-out reward highest (8 cases), validity: invalid <= base+1pp, FR==0
+
+arms:
+  f0: current_cf
+  f1: best_simple
+  f2: adaptive
+  f3: adaptive_shuffle
+  f4: eligible_cf
+
+multiseed:
+  seeds: [42, 43, 44]
+  arms: [current_cf, adaptive]
+
+trainer: vhh_rl.native_atom14.weighted_dpo.run_weighted_dpo
