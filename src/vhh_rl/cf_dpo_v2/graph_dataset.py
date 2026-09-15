@@ -54,6 +54,8 @@ class Graph:
     edges: list[Edge] = field(default_factory=list)
 
     def add_node(self, node: Node) -> None:
+        if node.node_id in self.nodes:
+            raise ValueError(f"duplicate comparison-graph node id: {node.node_id}")
         self.nodes[node.node_id] = node
 
 
@@ -175,16 +177,20 @@ def build_graph(case_ids: list[str], *, sites_per_pair: int = 3,
                     continue
                 stats["n_lift_ok"] += 1
                 stats["classes"][cls] += 1
-                node_id = f"{cid}:{direction}:{pos}"
+                # node ids must be unique across pairs of the same case
+                node_id = f"{cid}:{w_id}:{l_id}:{direction}:{pos}"
                 cf_id = (f"{pid}:{'winner_drop' if direction == 'winner_drop' else 'loser_gain'}"
                          f":{pos}")
                 reward = cf_rewards.get(cf_id, cf_rewards.get(f"{pid}:{direction}:{pos}"))
                 graph.add_node(Node(node_id, cid, att.coords, expected, reward, "lifted"))
-                dR = (win["reward"] - reward if direction == "winner_drop"
-                      else reward - lose["reward"]) if reward is not None else None
+                # edge convention everywhere: a -> b, dR = R(b) - R(a)
+                if direction == "winner_drop":      # a=winner, b=CF
+                    dR = (reward - win["reward"]) if reward is not None else None
+                else:                               # a=loser, b=CF
+                    dR = (reward - lose["reward"]) if reward is not None else None
                 if dR is not None:
-                    graph.edges.append(Edge(base_node, node_id, dR,
-                                            "drop" if direction == "winner_drop" else "gain"))
+                    graph.edges.append(Edge(base_node, node_id, dR, "drop"
+                                            if direction == "winner_drop" else "gain"))
                 # same-sequence realizations for this lifted node
                 stats["n_same_seq_attempts"] += 1
                 reals = build_same_sequence_realizations(

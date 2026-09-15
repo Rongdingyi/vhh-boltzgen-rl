@@ -1,3 +1,5 @@
+> **本表无效（reviewer E4）**：weighted 基线的 z 方向写反、drop 边 dR 符号写反。等待修正后重跑。
+
 # CF-DPO v2 — Experiment 2: exact small model
 
 | method | seq KL | cond-geom KL | full KL | sign acc | sign acc (flip) | sign acc (consistent) |

@@ -1,3 +1,5 @@
+> **本表无效（reviewer E1/E2/E3）**：drop 边方向反、node ID 覆盖、same-seq 双重采样导致 signed/v2 训练数据错误。等待修正后重跑。
+
 # CF-DPO v2 — Experiment 4 pilot（4 train / 4 held-out，matched updates）
 
 | arm | held-out reward | delta vs base | wins | n |

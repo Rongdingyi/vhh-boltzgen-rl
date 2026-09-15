@@ -99,7 +99,8 @@ def build_data(world: SmallWorld, n_cases: int, pool_size: int, seed: int):
             gain_seq = world.local_move(loser, i)
             d_drop = world.reward[winner] - world.reward[drop_seq]
             d_gain = world.reward[gain_seq] - world.reward[loser]
-            edges.append((winner, g_w, drop_seq, g_w, d_drop, "drop"))
+            # edge convention: a -> b, dR = R(b) - R(a); a=winner, b=drop_seq
+            edges.append((winner, g_w, drop_seq, g_w, -d_drop, "drop"))
             edges.append((loser, g_l, gain_seq, g_l, d_gain, "gain"))
         # same-sequence geometry edges for the winner/loser (decoder equivalence)
         for s in {winner, loser}:
@@ -198,7 +199,9 @@ def train_method(name: str, world: SmallWorld, feats, log_p0, target, pairs, edg
                 for (win, lose) in pairs:
                     a = idx[(win, 0)]
                     b = idx[(lose, 0)]
-                    z = (feats[b] @ theta - feats[a] @ theta) / tau
+                    # weights methods: one preference edge loser->winner,
+                    # z = H(winner) - H(loser) (same convention as every edge)
+                    z = (feats[a] @ theta - feats[b] @ theta) / tau
                     t = torch.sigmoid(torch.tensor(
                         (world.reward[win] - world.reward[lose]) / tau))
                     weight = w_cf[(win, lose)] if name == "current_cf" else w_sign[(win, lose)]

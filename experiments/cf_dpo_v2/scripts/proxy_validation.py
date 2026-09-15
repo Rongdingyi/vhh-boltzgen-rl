@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import statistics as st
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 import torch
@@ -39,7 +41,18 @@ def main() -> None:
 
     graph = torch.load(GRAPH, map_location="cpu", weights_only=False)
     nodes, edges = graph["nodes"], graph["edges"]
-    edges = [e for e in edges if e["kind"] != "same_seq"][: args.max_edges]
+    edges = [e for e in edges if e["kind"] != "same_seq"]
+    # stratified random sampling (not head-of-list)
+    rng = random.Random(0)
+    by_kind: dict[str, list] = defaultdict(list)
+    for e in edges:
+        by_kind[e["kind"]].append(e)
+    per_kind = max(1, args.max_edges // max(1, len(by_kind)))
+    sampled = []
+    for kind, lst in sorted(by_kind.items()):
+        rng.shuffle(lst)
+        sampled.extend(lst[:per_kind])
+    edges = sampled[: args.max_edges]
 
     # policy = evaluated checkpoint (or base); reference = the ORIGINAL frozen base
     policy = load_base_model(args.ckpt or BASE, device="cuda")
@@ -75,23 +88,35 @@ def main() -> None:
                                 feats, coords_a, coords_b, sigma, noise, kwargs,
                                 tau=1.0, kappa=1.0, require_grad=False)
             diffs.append(info["h_b"] - info["h_a"])
-        rows.append({"kind": edge["kind"], "dR": edge["dR"],
+        # ground truth recomputed from node rewards (not the stored edge label)
+        dR_true = None
+        if node_a.get("reward") is not None and node_b.get("reward") is not None:
+            dR_true = node_b["reward"] - node_a["reward"]
+        rows.append({"kind": edge["kind"], "dR_stored": edge["dR"],
+                     "dR_node": dR_true,
                      "delta_h_mean": st.mean(diffs),
                      "delta_h_std": st.stdev(diffs) if len(diffs) > 1 else 0.0})
-    agree = [r for r in rows if r["dR"] != 0]
+    mismatch = sum(1 for r in rows
+                   if r["dR_node"] is not None
+                   and abs(r["dR_node"] - r["dR_stored"]) > 1e-6)
+    agree = [r for r in rows if r["dR_node"] not in (None, 0)]
     sign_ok = sum(1 for r in agree
-                  if (r["delta_h_mean"] > 0) == (r["dR"] > 0))
+                  if (r["delta_h_mean"] > 0) == (r["dR_node"] > 0))
     sign_acc = sign_ok / max(1, len(agree))
     noise = st.median([r["delta_h_std"] for r in rows])
     summary = {"checkpoint": str(args.ckpt or "base"), "n_edges": len(rows),
-               "sign_agreement": sign_acc, "median_sigma_noise": noise,
+               "n_sign_evaluated": len(agree),
+               "stored_vs_node_label_mismatches": mismatch,
+               "sign_agreement_vs_node_reward": sign_acc, "median_sigma_noise": noise,
                "median_abs_delta_h": st.median([abs(r["delta_h_mean"]) for r in rows])}
     (OUT / f"proxy_{args.ckpt.stem if args.ckpt else 'base'}.json").write_text(
         json.dumps({"summary": summary, "rows": rows}, indent=1))
     doc = (f"# CF-DPO v2 proxy validation\n\n"
            f"- checkpoint: {summary['checkpoint']}\n"
-           f"- edges: {summary['n_edges']}\n"
-           f"- **sign agreement vs reward: {sign_acc:.3f}**\n"
+           f"- edges: {summary['n_edges']} (stratified random sample)\n"
+           f"- sign-evaluated edges (dR != 0): {summary['n_sign_evaluated']}\n"
+           f"- stored-vs-node label mismatches: {summary['stored_vs_node_label_mismatches']}\n"
+           f"- **sign agreement vs node reward: {sign_acc:.3f}**\n"
            f"- median across-sigma noise (std of dh): {noise:.3e}\n"
            f"- median |dh|: {summary['median_abs_delta_h']:.3e}\n")
     DOC.write_text(doc)

@@ -151,6 +151,18 @@ case "$CMD" in
     run_gate /share/home/rongdingyi/.conda/envs/vhh-guidance/bin/python "$ROOT/scripts/cf_opsd_static_eval.py" ;;
   cf-opsd-report)
     run_gate /usr/bin/python3 "$ROOT/scripts/cf_opsd_report.py" ;;
+  cfd2-build-graph)
+    run_gate "$ROOT/experiments/cf_dpo_v2/scripts/sbatch_build_graph.sh" ;;
+  cfd2-exp2)
+    run_gate "$ROOT/experiments/cf_dpo_v2/scripts/sbatch_exp2_small.sh" ;;
+  cfd2-train-signed)
+    run_gate env VARIANT=signed sbatch "$ROOT/experiments/cf_dpo_v2/scripts/sbatch_signed_pilot.sh" ;;
+  cfd2-train-v2)
+    run_gate env VARIANT=v2 sbatch "$ROOT/experiments/cf_dpo_v2/scripts/sbatch_signed_pilot.sh" ;;
+  cfd2-proxy)
+    run_gate "$ROOT/experiments/cf_dpo_v2/scripts/sbatch_proxy_validation.sh" ;;
+  cfd2-report)
+    run_gate "$ROOT/experiments/cf_dpo_v2/scripts/sbatch_exp4_report.sh" ;;
   *)
     echo "usage: bash run.sh {audit|baseline|toy-reinforce|toy-grpo|scorer-overfit|evaluate|all-round1|next-*}" >&2
     exit 2 ;;

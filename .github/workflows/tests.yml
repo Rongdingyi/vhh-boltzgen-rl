@@ -34,4 +34,6 @@ jobs:
             tests/test_onpolicy_config.py \
             tests/test_onpolicy_wiring.py \
             tests/test_gate_checks.py \
-            tests/test_static_eval_rows.py
+            tests/test_static_eval_rows.py \
+            tests/test_cfd2_sampling.py \
+            tests/test_cfd2_graph_conventions.py

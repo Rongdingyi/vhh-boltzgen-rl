@@ -30,6 +30,7 @@ from ..native_atom14.checkpoint import (
 from ..native_atom14.denoise_loss import per_sample_denoising_loss
 from ..native_atom14.dpo_trainer import load_conditioning, move_conditioning
 from ..native_atom14.paired_noise import paired_noising
+from .sampling import choose_edge
 
 DEVICE = "cuda"
 ROOT = Path("/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl")
@@ -85,8 +86,6 @@ def run_signed(base_checkpoint: str | Path, graph_path: str | Path,
     nodes, edges = graph["nodes"], graph["edges"]
     if variant == "signed":
         edges = [e for e in edges if e["kind"] != "same_seq"]
-    local_edges = [e for e in edges if e["kind"] != "global"]
-    global_edges = [e for e in edges if e["kind"] == "global"]
     if not edges:
         raise RuntimeError("empty comparison graph")
 
@@ -104,14 +103,7 @@ def run_signed(base_checkpoint: str | Path, graph_path: str | Path,
     calib_h: list[float] = []
     kappa_eff = kappa
     for step in range(1, updates + 1):
-        use_same = variant == "v2" and random.random() < same_seq_ratio and any(
-            e["kind"] == "same_seq" for e in edges)
-        if use_same:
-            edge = random.choice([e for e in edges if e["kind"] == "same_seq"])
-        elif local_edges and random.random() < 0.75:
-            edge = random.choice(local_edges)
-        else:
-            edge = random.choice(global_edges or edges)
+        edge = choose_edge(edges, variant, same_seq_ratio, random)
         node_a, node_b = nodes[edge["a"]], nodes[edge["b"]]
         cid = node_a["case_id"]
         if cid not in cond_cache:

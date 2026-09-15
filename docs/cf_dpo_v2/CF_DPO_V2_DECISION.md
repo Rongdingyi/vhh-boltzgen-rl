@@ -1,3 +1,17 @@
+> **状态更新（审阅后，2026-09-15）**：本文档原先的 **NO-GO（算法形态）判定已撤回**。
+> 审阅发现 4 个会实质改变训练方向的代码错误（drop 边 dR 方向、node ID 覆盖、
+> same-seq 双重采样、Exp2 基线方向），并污染了 proxy 校验的 ground truth；
+> 详见 `CF_DPO_V2_ERRATA.md`。当前正确状态为：
+>
+> **INVALID EXPERIMENT / NEEDS CORRECTNESS RERUN**
+>
+> - 有效：Exp1 数据复核；Exp3 几何 lift 接受率（86.5%、FR 0、same-seq 覆盖 100%）；
+>   CF-DPO-mini matched baseline（+4.39，不受 v2 bug 影响）。
+> - 无效待重跑：Exp2 的 weighted-vs-signed 数字；Exp4 signed/v2 pilot 表；
+>   proxy sign agreement = 0.475（ground truth 被污染）。
+> - 下文 §5–§9 的旧结论保留为历史记录，**不再作为判定依据**；修正后的结果将
+>   写入重跑版文档。
+>
 # CF-DPO v2 Feasibility Decision
 
 任务书：`CF_DPO_V2_RESEARCH_PROPOSAL.md`（references/cf_dpo_v2/）。
