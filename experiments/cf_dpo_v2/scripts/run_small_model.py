@@ -329,8 +329,9 @@ def main() -> None:
     summary = {}
     for method, rows in results.items():
         summary[method] = {
-            k: {"mean": st.mean(r[k] for r in rows),
-                "std": st.stdev(r[k] for r in rows) if len(rows) > 1 else 0.0}
+            k: {"mean": float(st.mean([float(r[k]) for r in rows])),
+                "std": (float(st.stdev([float(r[k]) for r in rows]))
+                        if len(rows) > 1 else 0.0)}
             for k in ("seq_kl", "cond_geom_kl", "full_kl",
                       "sign_acc", "sign_acc_flip", "sign_acc_consistent")
         }
