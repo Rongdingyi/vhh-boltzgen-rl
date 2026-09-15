@@ -9,7 +9,8 @@ sys.path.insert(0, str(ROOT / "src"))
 from vhh_rl.signed_local.evaluator import evaluate_reward  # noqa: E402
 
 HELDOUT = ["sab2_4hf5_h", "sab2_4mwf_h", "sab2_5mp6_h", "sab2_6cvk_b2"]
-ARMS = {"cf": 100, "local": 100, "neg": 100, "main": 100, "shuffle": 100, "addon": 100, "cf125": 125}
+ARMS = {"cf": 100, "local": 100, "neg": 100, "main": 100, "shuffle": 100,
+        "addon": 125, "cf125": 125}
 
 
 def main() -> None:

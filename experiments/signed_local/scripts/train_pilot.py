@@ -12,14 +12,15 @@ from vhh_rl.signed_local.trainer import run_signed_local  # noqa: E402
 BASE = Path("/share/home/rongdingyi/programs/proteingen/boltzgen/ckpts/boltzgen1_diverse.ckpt")
 PILOT_CASES = ["sab2_6u52_c", "sab2_7sl5_d", "sab2_7nqk_b", "sab2_6mqe_h"]
 ARMS = {
-    "cf":     dict(mode="global_only", updates=100, classes=("both_negative", "sign_flip"), shuffle=False),
-    "local":  dict(mode="local_only",  updates=100, classes=("both_negative", "sign_flip"), shuffle=False),
-    "neg":    dict(mode="mixed",       updates=100, classes=("both_negative",), shuffle=False),
-    "main":   dict(mode="mixed",       updates=100, classes=("both_negative", "sign_flip"), shuffle=False),
-    "shuffle": dict(mode="mixed",      updates=100, classes=("both_negative", "sign_flip"), shuffle=True),
-    # conditional add-on arms (§46)
-    "addon":  dict(mode="global_only", updates=100, classes=("both_negative", "sign_flip"), shuffle=False),
-    "cf125":  dict(mode="global_only", updates=125, classes=("both_negative", "sign_flip"), shuffle=False),
+    "cf":     dict(mode="global_only", updates=100, schedule=(3, 1), classes=("both_negative", "sign_flip"), shuffle=False),
+    "local":  dict(mode="local_only",  updates=100, schedule=(3, 1), classes=("both_negative", "sign_flip"), shuffle=False),
+    "neg":    dict(mode="mixed",       updates=100, schedule=(3, 1), classes=("both_negative",), shuffle=False),
+    "main":   dict(mode="mixed",       updates=100, schedule=(3, 1), classes=("both_negative", "sign_flip"), shuffle=False),
+    "shuffle": dict(mode="mixed",      updates=100, schedule=(3, 1), classes=("both_negative", "sign_flip"), shuffle=True),
+    # conditional arms (§46): A6 = 100 global CF + 25 local add-on (125 updates),
+    # A7 = compute-matched 125 global CF updates.
+    "addon":  dict(mode="mixed",       updates=125, schedule=(4, 1), classes=("both_negative", "sign_flip"), shuffle=False),
+    "cf125":  dict(mode="global_only", updates=125, schedule=(3, 1), classes=("both_negative", "sign_flip"), shuffle=False),
 }
 
 
@@ -44,7 +45,7 @@ def main() -> None:
         ROOT / "runs/next_stage/weights/residue_weights.json", out_dir,
         mode=spec["mode"], local_classes=spec["classes"],
         shuffle_direction=spec["shuffle"], updates=spec["updates"],
-        schedule=(3, 1), seed=args.seed,
+        schedule=spec["schedule"], seed=args.seed,
         conditioning_dir=ROOT / "runs/native_pool/conditioning",
         log_tag=f"slcf-{args.arm}")
     print(json.dumps(summary, indent=1))
