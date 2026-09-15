@@ -8,7 +8,10 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from vhh_rl.signed_local.edge_validator import load_edges, validate_dataset  # noqa: E402
+try:
+    from vhh_rl.signed_local.edge_validator import load_edges, validate_dataset  # noqa: E402
+except ImportError as exc:  # boltzgen-backed native stack unavailable (CI)
+    pytest.skip(f"edge_validator requires native_atom14: {exc}", allow_module_level=True)
 
 EDGES = ROOT / "runs/signed_local/edges/train_edges.jsonl"
 

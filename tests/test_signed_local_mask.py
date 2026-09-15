@@ -9,9 +9,12 @@ import torch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from vhh_rl.signed_local.local_mask import (  # noqa: E402
-    assert_mask_invariants, target_residue_mask,
-)
+try:
+    from vhh_rl.signed_local.local_mask import (  # noqa: E402
+        assert_mask_invariants, target_residue_mask,
+    )
+except ImportError as exc:  # boltzgen-backed native stack unavailable (CI)
+    pytest.skip(f"local_mask requires native_atom14: {exc}", allow_module_level=True)
 
 
 def _feats() -> dict:
