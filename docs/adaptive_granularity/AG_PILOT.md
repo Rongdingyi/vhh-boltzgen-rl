@@ -41,5 +41,5 @@
 
 ## Notes
 
-- best simple arm（Gate B3 进入时取 Region-only）：strict
+- best simple arm（Gate B3 进入时取 Region-only）：region
 - 3-seed confirmation（§49/§50）仅对 Current CF / Adaptive 运行，结果见 `runs/adaptive_granularity/pilot/seed_*`。

@@ -45,7 +45,7 @@ Current CF heldout8 reward：1.883255540393293
   "coarse_rescue_share": 0.5456204379562044
  },
  "pass": true,
- "best_simple": "strict"
+ "best_simple": "region"
 }
 ```
 

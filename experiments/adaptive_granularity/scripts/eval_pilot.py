@@ -85,7 +85,7 @@ def main() -> None:
             pass
     out = C.PILOT_DIR / "eval" / "pilot_summary.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    merged = json.loads(out.read_text()) if out.is_file() and args.run_tag else {}
+    merged = json.loads(out.read_text()) if out.is_file() else {}
     merged.update(results)
     out.write_text(json.dumps(merged, indent=1))
     print(json.dumps({k: v.get("reward_mean") for k, v in merged.items()}, indent=1))
