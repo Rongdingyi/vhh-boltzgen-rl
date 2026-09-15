@@ -1,6 +1,6 @@
 version: 1
 method: ag_cf_dpo
-repo_commit: 9545a6770fe6ec459859b4659b450716e2cf49c1
+repo_commit: 5c4d280017db5eae6aa930e6b19676eec9313b71
 boltzgen_commit: a3149cf18eeb58648d1abbb27539bd73f746cdda
 base_checkpoint_sha256: 360af8bd6e59527ff6ec25dd81253967f3bd3567d200053b10680634751f8e3c
 pairs_train_sha256: fd9776fd8e82d2be57904b5f82ddd84cbfae4831d27e8ac54eb2713aae338b39
