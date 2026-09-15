@@ -83,15 +83,18 @@ def main() -> None:
         acceptor = pool[edge.anchor_sample_id]
         donor = pool[edge.donor_sample_id]
         case = cases[edge.case_id]
-        acceptor_coords = acceptor["coords"].to("cuda").float()
-        donor_coords = donor["coords"].to("cuda").float()
-        attempt = build_local_lift(acceptor_coords, donor_coords, feats,
+        # Lift exactly like build_local_edges did: disk feats (squeezed shapes)
+        # and CPU coords, then move the result onto the GPU for the DPO steps.
+        feats_disk = torch.load(C.POOL / "train" / edge.case_id / "feats_common.pt",
+                                map_location="cpu", weights_only=False)
+        attempt = build_local_lift(acceptor["coords"], donor["coords"], feats_disk,
                                    edge.position, case["full_sequence"],
                                    tuple(case["fr_positions"]), edge.cf_sequence,
                                    donor["sequence"], acceptor["sequence"])
         if not attempt.ok or attempt.coords is None:
             return None, None, f"lift_failed:{attempt.reason}"
-        return (acceptor_coords, attempt.coords.to("cuda").float(), "rebuilt")
+        return (acceptor["coords"].to("cuda").float(),
+                attempt.coords.to("cuda").float(), "rebuilt")
 
     cond_cache: dict[str, dict] = {}
 
