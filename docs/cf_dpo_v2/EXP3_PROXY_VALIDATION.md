@@ -1,18 +1,18 @@
-# CF-DPO v2 proxy validation
+# CF-DPO v2 proxy validation（修正后最终版）
 
-- checkpoint: /share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl/runs/cf_dpo_v2/v2_u100/checkpoint_0100.pt
-- edges: 78 (stratified random sample)
-- sign-evaluated edges (dR != 0): 78
-- stored-vs-node label mismatches: 0
-- **sign agreement vs node reward: 0.526**
-- median across-sigma noise (std of dh): 1.419e-04
-- median |dh|: 4.791e-05
+在 v2-u100 checkpoint（warmup-restart 校准，κ_eff=9.34e3）上，对比较图的
+非 same-seq 边做**分层随机抽样**（seed 固定），ground truth 由节点 reward
+重算 `R(b)-R(a)`，nσ=32。
 
-## 说明（修正版）
+| 指标 | 值 |
+|---|---|
+| 评估边数（dR≠0） | 78 |
+| stored-vs-node label mismatch | **0** |
+| **代理符号一致率 vs node reward** | **0.615** |
+| median \|Δh\|（信号） | 4.01e-05 |
+| median σ-噪声（Δh 的 std） | 2.70e-04 |
 
-- ground truth 改为从节点 reward 重算 `R(b)-R(a)`：stored-vs-node **label mismatch = 0**
-  （确认 E1/E2 已修复）；
-- 分层随机抽样 78 条边（非顺序截断）；
-- 训练后 v2 checkpoint 的代理符号一致率 **0.526**（≈随机），
-  median |Δh| = 4.8e-5，σ 噪声 = 1.4e-4（**噪声 ≈ 3× 信号**）。
-- 结论方向不变且现在是干净测量：**denoising-energy proxy 无法提供可靠的局部排序**。
+结论：修正所有图/标签 bug 后，denoising-energy proxy 的局部排序仍**不可靠**
+（符号一致率 0.615，噪声约为信号的 6.7 倍）。这解释了为什么基于该代理的
+signed/v2 BCE 训练无法兑现（机制性失败），也与 proposal §11.2 标注的
+"denoising loss 不是精确 log density" 风险一致。

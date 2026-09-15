@@ -159,8 +159,6 @@ def run_signed(base_checkpoint: str | Path, graph_path: str | Path,
     kappa_eff = kappa
     calib_info: dict[str, Any] = {"mode": "fixed", "kappa": kappa}
     if pre_calibrate:
-        import statistics as _st
-
         pristine = {k: v.detach().clone() for k, v in policy.state_dict().items()}
         warm_opt = torch.optim.AdamW(params, lr=lr, weight_decay=0.0)
         calib_h: list[float] = []
@@ -168,7 +166,11 @@ def run_signed(base_checkpoint: str | Path, graph_path: str | Path,
             edge = choose_edge(edges, variant, same_seq_ratio, random)
             _loss, _z, info = train_step(edge, kappa, warm_opt)
             calib_h.extend([info["h_a"], info["h_b"]])
-        emp_std = _st.stdev(calib_h) if len(calib_h) > 1 else 0.0
+        if len(calib_h) > 1:
+            _m = sum(calib_h) / len(calib_h)
+            emp_std = math.sqrt(sum((v - _m) ** 2 for v in calib_h) / (len(calib_h) - 1))
+        else:
+            emp_std = 0.0
         if emp_std > 0:
             kappa_eff = kappa * (target_h_std / emp_std)
         calib_info = {"mode": "warmup_restart", "n_calib_steps": n_calib_steps,

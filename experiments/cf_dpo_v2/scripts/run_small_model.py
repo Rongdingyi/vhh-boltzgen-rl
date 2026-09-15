@@ -263,7 +263,8 @@ def train_method(name: str, world: SmallWorld, feats, log_p0, target, pairs, edg
                     cond_kl += qs * p * math.log(p / r)
             if qs > 0:
                 seq_kl += qs * math.log(qs / world.q_star_seq[s])
-        full_kl = float((q * (q.log() - target.log())).sum())
+        eps = 1e-12
+        full_kl = float((q * (q.clamp_min(eps).log() - target.clamp_min(eps).log())).sum())
     out = {"seq_kl": seq_kl, "cond_geom_kl": cond_kl, "full_kl": full_kl,
            "theta_norm": float(theta.norm())}
     if eval_edges is not None:
@@ -326,12 +327,18 @@ def main() -> None:
             results.setdefault(method, []).append(res)
         print(f"[world {world_seed}] done", flush=True)
 
+    def mean_std(values):
+        vals = [float(v) for v in values]
+        m = sum(vals) / len(vals)
+        if len(vals) < 2:
+            return m, 0.0
+        var = sum((v - m) ** 2 for v in vals) / (len(vals) - 1)
+        return m, math.sqrt(var)
+
     summary = {}
     for method, rows in results.items():
         summary[method] = {
-            k: {"mean": float(st.mean([float(r[k]) for r in rows])),
-                "std": (float(st.stdev([float(r[k]) for r in rows]))
-                        if len(rows) > 1 else 0.0)}
+            k: dict(zip(("mean", "std"), mean_std([r[k] for r in rows])))
             for k in ("seq_kl", "cond_geom_kl", "full_kl",
                       "sign_acc", "sign_acc_flip", "sign_acc_consistent")
         }
