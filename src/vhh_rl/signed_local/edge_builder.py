@@ -101,6 +101,7 @@ def build_edges(
     seen: set[str] = set()
     n_sites = 0
     n_class = defaultdict(int)
+    site_acc: dict[str, set] = defaultdict(set)  # accepted (pair, pos) per class
     n_att = defaultdict(int)
     n_acc = defaultdict(int)
     with attempts_path.open("w", newline="") as af:
@@ -179,6 +180,7 @@ def build_edges(
                         continue
                     assert eid not in seen, f"duplicate edge id {eid}"
                     seen.add(eid)
+                    site_acc[cls].add((pid, pos))
                     edge = LocalPreferenceEdge(
                         edge_id=eid, case_id=cid, pair_id=pid, position=pos,
                         context=context, event_class=cls,
@@ -232,7 +234,7 @@ def build_edges(
         "n_edges": len(edges),
     }
     summary["acceptance_by_class"] = {
-        cls: _acceptance_by_class(edges, cls, n_class) for cls in sorted(classes)}
+        cls: _acceptance_by_class(site_acc, cls, n_class) for cls in sorted(classes)}
     summary_path.write_text(json.dumps(summary, indent=1))
     return summary
 
@@ -243,7 +245,7 @@ def _median(xs: list[float]) -> float | None:
     return st.median(xs) if xs else None
 
 
-def _acceptance_by_class(edges, cls: str, n_class) -> float | None:
-    accepted = sum(1 for e in edges if e.event_class == cls)
+def _acceptance_by_class(site_acc: dict, cls: str, n_class) -> float | None:
+    """Fraction of considered sites whose lift was accepted (either context)."""
     total = n_class.get(cls, 0)
-    return (accepted / total) if total else None
+    return (len(site_acc.get(cls, ())) / total) if total else None
