@@ -39,6 +39,7 @@ def main() -> None:
         compute_weighted_cf_dpo_step, signed_local_dpo_step,
     )
     from vhh_rl.native_atom14.masks import design_token_offset, residue_atom_masks
+    from vhh_rl.signed_local.edge_builder import load_case_pool
     from vhh_rl.signed_local.edge_validator import load_edges
     from vhh_rl.signed_local.local_mask import target_residue_mask
 
@@ -54,6 +55,42 @@ def main() -> None:
     model = load_base_model(C.BASE_CKPT, device="cuda")
     policy, reference = make_policy_reference(model, device="cuda")
     params = trainable_score_params(policy)
+
+    cases: dict[str, object] = {}
+    for line in C.MANIFEST.open():
+        row = json.loads(line)
+        cases[row["case_id"]] = row
+    pool_cache: dict[str, dict] = {}
+
+    def edge_coords(edge, feats):
+        """Stored coords if present, otherwise rebuild the lift deterministically.
+
+        SL train coords were clobbered by an earlier heldout build; the lift is
+        deterministic, so reconstruction is faithful and is reported explicitly.
+        """
+        anchor_path = Path(edge.anchor_coords_path)
+        cf_path = Path(edge.cf_coords_path)
+        if anchor_path.is_file() and cf_path.is_file():
+            return (torch.load(anchor_path, map_location="cuda",
+                               weights_only=True).float(),
+                    torch.load(cf_path, map_location="cuda",
+                               weights_only=True).float(), "stored")
+        from vhh_rl.cf_dpo_v2.geometry_lift import build_local_lift
+
+        if edge.case_id not in pool_cache:
+            pool_cache[edge.case_id] = load_case_pool("train", edge.case_id)
+        pool = pool_cache[edge.case_id]
+        acceptor = pool[edge.anchor_sample_id]
+        donor = pool[edge.donor_sample_id]
+        case = cases[edge.case_id]
+        attempt = build_local_lift(acceptor["coords"], donor["coords"], feats,
+                                   edge.position, case["full_sequence"],
+                                   tuple(case["fr_positions"]), edge.cf_sequence,
+                                   donor["sequence"], acceptor["sequence"])
+        if not attempt.ok or attempt.coords is None:
+            return None, None, f"lift_failed:{attempt.reason}"
+        return (acceptor["coords"].to("cuda").float(),
+                attempt.coords.to("cuda").float(), "rebuilt")
 
     cond_cache: dict[str, dict] = {}
 
@@ -99,10 +136,10 @@ def main() -> None:
                                       allow_unused=True)
 
         mask = target_residue_mask(feats, edge.position, design[edge.case_id]).to("cuda")
-        anchor = torch.load(edge.anchor_coords_path, map_location="cuda",
-                            weights_only=True).float()
-        cfc = torch.load(edge.cf_coords_path, map_location="cuda",
-                         weights_only=True).float()
+        anchor, cfc, source = edge_coords(edge, feats)
+        if anchor is None:
+            print(f"[skip] {edge.edge_id}: {source}", flush=True)
+            continue
         preferred, rejected = ((cfc, anchor) if edge.preferred_side == "cf"
                                else (anchor, cfc))
         torch.manual_seed(site_seed)   # same realization as the global step
@@ -122,6 +159,7 @@ def main() -> None:
             "edge_id": edge.edge_id, "pair_id": edge.pair_id,
             "case_id": edge.case_id, "region": cred.get("region"),
             "c_drop": cred.get("c_drop"), "c_gain": cred.get("c_gain"),
+            "coords_source": source,
             "cosine": cosine,
             "sigma_global": float(g_step.sigma.reshape(-1).mean()),
             "sigma_local": float(l_step.sigma.reshape(-1).mean()),
@@ -131,6 +169,7 @@ def main() -> None:
 
     sigma_mismatch = sum(1 for r in rows
                          if abs(r["sigma_global"] - r["sigma_local"]) > 1e-9)
+    coords_rebuilt = sum(1 for r in rows if r["coords_source"] == "rebuilt")
     cosines = [r["cosine"] for r in rows if r["cosine"] is not None]
     cosines_sorted = sorted(cosines)
     payload = {
@@ -143,6 +182,7 @@ def main() -> None:
         "strong_negative_fraction": (sum(1 for c in cosines if c < -0.1) / len(cosines))
         if cosines else None,
         "sigma_mismatch_sites": sigma_mismatch,
+        "coords_rebuilt_sites": coords_rebuilt,
         "by_region": _group(rows, "region"),
         "rows": rows,
     }

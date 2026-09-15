@@ -86,7 +86,10 @@ def build_edges(
     classes = classes if classes is not None else {"both_negative", "sign_flip"}
     out_dir = Path(out_dir)
     coords_dir = out_dir / "coords"
-    if coords_dir.exists():
+    if split == "train" and coords_dir.exists():
+        # Only the canonical train rebuild owns the full coords cleanup: a
+        # heldout build must not delete the train edge coordinates (they are
+        # keyed by edge id, so heldout files never collide with train ones).
         shutil.rmtree(coords_dir)
     coords_dir.mkdir(parents=True, exist_ok=True)
     attempts_path = out_dir / "lift_attempts.csv"
