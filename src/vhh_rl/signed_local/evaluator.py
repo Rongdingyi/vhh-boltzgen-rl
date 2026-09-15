@@ -70,14 +70,25 @@ def local_preference_accuracy(base_checkpoint, ckpt: Path | None, edges_path,
                 zs.append(float(out.dpo.z.mean()))
         per_edge.append({"edge_id": e.edge_id, "event_class": e.event_class,
                          "context": e.context, "z": sum(zs) / len(zs)})
+    tol = 1e-12
+
+    def label(z: float) -> float:
+        if z > tol:
+            return 1.0
+        if z < -tol:
+            return 0.0
+        return 0.5  # exact ties count as chance
+
     acc = defaultdict(list)
     for r in per_edge:
-        acc["all"].append(1.0 if r["z"] > 0 else 0.0)
-        acc[r["event_class"]].append(1.0 if r["z"] > 0 else 0.0)
-        acc[r["context"]].append(1.0 if r["z"] > 0 else 0.0)
+        acc["all"].append(label(r["z"]))
+        acc[r["event_class"]].append(label(r["z"]))
+        acc[r["context"]].append(label(r["z"]))
     zs_all = sorted(r["z"] for r in per_edge)
+    n_ties = sum(1 for r in per_edge if abs(r["z"]) <= tol)
     return {
         "n_edges": len(per_edge),
+        "n_ties": n_ties,
         "accuracy": {k: (sum(v) / len(v) if v else None) for k, v in acc.items()},
         "median_z": zs_all[len(zs_all) // 2] if zs_all else None,
         "per_edge": per_edge,

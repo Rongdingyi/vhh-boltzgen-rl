@@ -38,6 +38,8 @@ case "$STAGE" in
   heldout)
     $PY -u "$ROOT/experiments/signed_local/scripts/build_heldout_edges.py"
     $PY -u "$ROOT/experiments/signed_local/scripts/eval_local_preference.py" ;;
+  preference)
+    $PY -u "$ROOT/experiments/signed_local/scripts/eval_local_preference.py" ;;
   full)
     ARM=${ARM:?set ARM=f0|f1|f2|f3}
     $PY -u "$ROOT/experiments/signed_local/scripts/train_full.py" --arm "$ARM" ;;
