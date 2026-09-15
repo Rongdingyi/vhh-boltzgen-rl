@@ -166,7 +166,7 @@ def test_full_multiseed_guard_requires_full_go(tmp_path, monkeypatch):
 
 def test_full_report_gate_names(tmp_path, monkeypatch):
     import make_full_report
-    base_cases = {c: 0.0 for c in C.heldout8()}
+    base_cases = {f"case_{i}": 0.0 for i in range(8)}   # no manifest read in CI
     payload = {
         "base": {"reward_mean": 0.0},
         "f0_seed20260913": {"selected": {"reward_mean": 1.0, "per_case": base_cases,
