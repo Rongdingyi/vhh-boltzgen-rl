@@ -239,6 +239,26 @@ case "$CMD" in
     run_gate env STAGE=full-seeds sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_gpu.sh" ;;
   ag-full-report)
     run_gate env STAGE=full-report sbatch "$ROOT/experiments/adaptive_granularity/scripts/sbatch_ag_cpu.sh" ;;
+  paper-diffonly-audit)
+    run_gate env STAGE=audit sbatch "$ROOT/experiments/paper_stage/scripts/sbatch_diffonly_cpu.sh" ;;
+  paper-ablate-diffonly-seed43)
+    run_gate sbatch "$ROOT/scripts/sbatch_next_cf_dpo.sh" --variant diff_only \
+      --weights "$ROOT/runs/paper_stage/weights/ablation_weights.json" \
+      --max-steps 500 --checkpoint-every 50 --seed 43 \
+      --output-dir "$ROOT/runs/paper_stage/diff_only_s43" --tag diff_only_s43 ;;
+  paper-ablate-diffonly-seed44)
+    run_gate sbatch "$ROOT/scripts/sbatch_next_cf_dpo.sh" --variant diff_only \
+      --weights "$ROOT/runs/paper_stage/weights/ablation_weights.json" \
+      --max-steps 500 --checkpoint-every 50 --seed 44 \
+      --output-dir "$ROOT/runs/paper_stage/diff_only_s44" --tag diff_only_s44 ;;
+  paper-diffonly-ckpt-eval)
+    run_gate sbatch "$ROOT/experiments/paper_stage/scripts/sbatch_diffonly_ckpt_eval.sh" ;;
+  paper-diffonly-select)
+    run_gate env STAGE=select sbatch "$ROOT/experiments/paper_stage/scripts/sbatch_diffonly_cpu.sh" ;;
+  paper-diffonly-valid100)
+    run_gate bash -c "PAPER_V100_TASKS=$ROOT/runs/paper_stage/valid100_tasks_diffonly.tsv sbatch --array=0-7%4 $ROOT/experiments/paper_stage/scripts/sbatch_paper_valid100.sh" ;;
+  paper-diffonly-report)
+    run_gate env STAGE=report sbatch "$ROOT/experiments/paper_stage/scripts/sbatch_diffonly_cpu.sh" ;;
   *)
     echo "usage: bash run.sh {audit|baseline|toy-reinforce|toy-grpo|scorer-overfit|evaluate|all-round1|next-*|cf-opsd-*|cfd2-*|slcf-*|ag-*}" >&2
     exit 2 ;;
