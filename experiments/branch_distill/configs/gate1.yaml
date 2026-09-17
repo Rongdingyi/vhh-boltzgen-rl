@@ -1,0 +1,20 @@
+# Gate 1: same-state sibling branching (task book §21)
+sampling_steps: 50
+candidate_progress: [0.60, 0.70, 0.80, 0.90]
+source_samples_per_case: 2
+siblings_per_source: 8
+behavior_checkpoint: native_base
+train_cases: [sab2_6u52_c, sab2_7sl5_d, sab2_7nqk_b, sab2_6mqe_h]
+gate:
+  group:
+    valid_rate: 0.75
+    n_unique_valid_sequences: 3
+    reward_std: 0.15
+    best_minus_median: 0.30
+    teacher_vs_median_hamming: 1
+  progress:
+    min_groups_pass: 6
+    n_groups: 8
+    median_valid_rate: 0.75
+    median_unique: 3
+    median_best_minus_median: 0.30

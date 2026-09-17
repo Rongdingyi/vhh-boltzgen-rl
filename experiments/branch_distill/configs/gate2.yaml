@@ -1,0 +1,16 @@
+# Gate 2: teacher target realization (task book §28/§34/§39)
+records: 12
+min_records_per_case: 2
+min_reward_gap: 0.30
+peer_types: [best_vs_worst, best_vs_median]
+overfit_updates: 40
+optimizer: {lr: 1.0e-5, weight_decay: 0.0, max_grad_norm: 1.0}
+trainable: structure_module.score_model only
+loss: masked MSE over touched & fake_atom & atom_pad (no hold term)
+gate:
+  replay_abs: 1.0e-5
+  mse_ratio: 0.50
+  median_mse_ratio: 0.40
+  min_improved: 10
+  min_downstream: 6
+  safety_slack: 0.20

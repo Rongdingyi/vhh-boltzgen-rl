@@ -50,4 +50,15 @@ jobs:
             tests/test_ag_shuffle.py \
             tests/test_ag_weight_invariants.py \
             tests/test_ag_pilot_wiring.py \
-            tests/test_diffonly_audit.py
+            tests/test_diffonly_audit.py \
+            tests/test_branch_schedule.py \
+            tests/test_branch_state_shapes.py \
+            tests/test_branch_decode.py \
+            tests/test_branch_teacher_select.py \
+            tests/test_branch_changed_positions.py \
+            tests/test_branch_local_target.py \
+            tests/test_branch_query_replay.py \
+            tests/test_branch_local_loss.py \
+            tests/test_branch_no_credit_dependency.py \
+            tests/test_branch_online_dpo_weights.py \
+            tests/test_branch_gate_logic.py

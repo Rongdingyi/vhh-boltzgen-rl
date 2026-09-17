@@ -47,6 +47,7 @@ def collect_case_rollouts(
     num_designs: int,
     seed: int,
     cond_steps: set[int] | None = None,
+    state_steps: set[int] | None = None,
 ) -> tuple[list[OPSDTrajectory], dict]:
     """Run the official design pipeline once and capture exact OPSD data.
 
@@ -198,9 +199,17 @@ def collect_case_rollouts(
             meta={"batch_index": b,
                   "multiplicity": int(net_calls[0]["multiplicity"]) if net_calls else 1},
         ))
+    # coords_traj[s] is the exact atom_coords state at the beginning of
+    # official denoising step s, before center/augmentation/noise of that step.
+    state_steps = set(state_steps or [])
+    sampler_states = {
+        int(s): schedule["coords_traj"][s].detach().float().cpu().clone()
+        for s in state_steps
+    }
     info = {
         "case_id": case_id,
         "seed": int(seed),
+        "sampler_states": sampler_states,
         "contexts": contexts,
         "cond_kwargs": cond_kwargs,
         "cond_kwargs_steps": cond_kwargs_steps,

@@ -1,0 +1,24 @@
+# Gate 3: component comparison (task book §42)
+train_cases: [sab2_6u52_c, sab2_7sl5_d, sab2_7nqk_b, sab2_6mqe_h]
+rounds: 4
+updates_per_round: 25
+total_updates: 100
+sampling_steps: 50
+siblings_per_case: 8
+source_states_per_case: 1
+selected_progress: FROM_GATE1
+teacher_peer_pairs: [best_vs_worst, best_vs_median]
+behavior_ema_decay: 0.99
+optimizer: {lr: 1.0e-5, weight_decay: 0.0, max_grad_norm: 1.0}
+arms:
+  a: offline fixed pairs diff_only DPO
+  b: online refreshed changed-position DPO
+  c: online sibling distill all CDR fake atoms
+  d: online sibling distill changed residues
+gate:
+  delta_D_A: 0.50
+  cases_D_ge_A: 5
+  delta_D_B: 0.25
+  delta_D_C: 0.25
+  max_invalid: 0.01
+eval: {heldout_cases: 8, samples: 8, sampling_steps: 50, seed_offset: 700000}

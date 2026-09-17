@@ -259,7 +259,35 @@ case "$CMD" in
     run_gate bash -c "PAPER_V100_TASKS=$ROOT/runs/paper_stage/valid100_tasks_diffonly.tsv sbatch --array=0-7%4 $ROOT/experiments/paper_stage/scripts/sbatch_paper_valid100.sh" ;;
   paper-diffonly-report)
     run_gate env STAGE=report sbatch "$ROOT/experiments/paper_stage/scripts/sbatch_diffonly_cpu.sh" ;;
+  branch-freeze)
+    run_gate env STAGE=freeze sbatch "$ROOT/experiments/branch_distill/scripts/sbatch_branch_cpu.sh" ;;
+  branch-smoke)
+    run_gate env STAGE=smoke sbatch "$ROOT/experiments/branch_distill/scripts/sbatch_branch_cpu.sh" ;;
+  branch-gate1-prefix)
+    run_gate env STAGE=gate1-prefix sbatch "$ROOT/experiments/branch_distill/scripts/sbatch_branch_gpu.sh" ;;
+  branch-gate1-probe)
+    run_gate env STAGE=gate1-probe sbatch "$ROOT/experiments/branch_distill/scripts/sbatch_branch_gpu.sh" ;;
+  branch-gate1-report)
+    run_gate env STAGE=gate1-report sbatch "$ROOT/experiments/branch_distill/scripts/sbatch_branch_cpu.sh" ;;
+  branch-gate2-build)
+    run_gate env STAGE=gate2-build sbatch "$ROOT/experiments/branch_distill/scripts/sbatch_branch_gpu.sh" ;;
+  branch-gate2-overfit)
+    run_gate env STAGE=gate2-overfit sbatch "$ROOT/experiments/branch_distill/scripts/sbatch_branch_gpu.sh" ;;
+  branch-gate2-report)
+    run_gate env STAGE=gate2-report sbatch "$ROOT/experiments/branch_distill/scripts/sbatch_branch_cpu.sh" ;;
+  branch-gate3-a)
+    run_gate env STAGE=gate3 ARM=a sbatch "$ROOT/experiments/branch_distill/scripts/sbatch_branch_gpu.sh" ;;
+  branch-gate3-b)
+    run_gate env STAGE=gate3 ARM=b sbatch "$ROOT/experiments/branch_distill/scripts/sbatch_branch_gpu.sh" ;;
+  branch-gate3-c)
+    run_gate env STAGE=gate3 ARM=c sbatch "$ROOT/experiments/branch_distill/scripts/sbatch_branch_gpu.sh" ;;
+  branch-gate3-d)
+    run_gate env STAGE=gate3 ARM=d sbatch "$ROOT/experiments/branch_distill/scripts/sbatch_branch_gpu.sh" ;;
+  branch-gate3-eval)
+    run_gate env STAGE=gate3-eval sbatch "$ROOT/experiments/branch_distill/scripts/sbatch_branch_gpu.sh" ;;
+  branch-gate3-report)
+    run_gate env STAGE=gate3-report sbatch "$ROOT/experiments/branch_distill/scripts/sbatch_branch_cpu.sh" ;;
   *)
-    echo "usage: bash run.sh {audit|baseline|toy-reinforce|toy-grpo|scorer-overfit|evaluate|all-round1|next-*|cf-opsd-*|cfd2-*|slcf-*|ag-*}" >&2
+    echo "usage: bash run.sh {audit|baseline|toy-reinforce|toy-grpo|scorer-overfit|evaluate|all-round1|next-*|cf-opsd-*|cfd2-*|slcf-*|ag-*|branch-*}" >&2
     exit 2 ;;
 esac
