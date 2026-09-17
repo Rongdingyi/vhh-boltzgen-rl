@@ -7,9 +7,6 @@ from __future__ import annotations
 
 import torch
 
-from ..native_atom14.global_cf_step import compute_weighted_cf_dpo_step
-from ..native_atom14.masks import design_token_offset, residue_atom_masks
-
 
 def uniform_changed_weights(changed_positions) -> dict[int, float]:
     positions = sorted(int(p) for p in changed_positions)
@@ -24,6 +21,9 @@ def online_dpo_step(policy_sm, ref_sm, feats: dict, teacher_coords: torch.Tensor
                     network_condition_kwargs: dict, *, design_positions,
                     beta: float = 10.0):
     """One weighted-DPO step between two endpoints of the same group."""
+    from ..native_atom14.global_cf_step import compute_weighted_cf_dpo_step
+    from ..native_atom14.masks import design_token_offset, residue_atom_masks
+
     weights = uniform_changed_weights(changed_positions)
     positions = sorted(weights)
     offset = design_token_offset(feats["token_index"], feats["design_mask"],

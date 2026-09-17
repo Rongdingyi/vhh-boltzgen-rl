@@ -8,11 +8,6 @@ from __future__ import annotations
 
 import torch
 
-from ..native_atom14.checkpoint import (
-    load_base_model, make_policy_reference, parameter_drift,
-    save_native_checkpoint, trainable_score_params,
-)
-
 DEVICE = "cuda"
 
 
@@ -74,6 +69,11 @@ def record_target_mask(record) -> torch.Tensor:
 def fit_record(base_checkpoint, record, *, updates: int = 40, lr: float = 1e-5,
                max_grad_norm: float = 1.0, device=DEVICE) -> dict:
     """One-record overfit from a fresh base student (§35); returns the student."""
+    from ..native_atom14.checkpoint import (
+        load_base_model, make_policy_reference, parameter_drift,
+        trainable_score_params,
+    )
+
     base = load_base_model(base_checkpoint, device=device)
     student, reference = make_policy_reference(base, device=device)
     params = trainable_score_params(student)

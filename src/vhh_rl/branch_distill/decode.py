@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import torch
 
-from ..native_atom14.decode import decode_atom14, fr_check, sequence_from_feat
-
 
 def squeeze_singleton_feats(feats: dict) -> dict:
     """Drop leading singleton batch dims so the unbatched decoder accepts feats."""
@@ -23,6 +21,8 @@ def squeeze_singleton_feats(feats: dict) -> dict:
 
 def decode_coords(coords: torch.Tensor, feats: dict) -> tuple[str, bool]:
     """Decode endpoint coords to (sequence, contains_invalid)."""
+    from ..native_atom14.decode import decode_atom14, sequence_from_feat
+
     feat = {k: (v.clone() if torch.is_tensor(v) else v)
             for k, v in squeeze_singleton_feats(feats).items()}
     feat["coords"] = coords.detach().float().cpu().clone()
@@ -33,6 +33,8 @@ def decode_coords(coords: torch.Tensor, feats: dict) -> tuple[str, bool]:
 
 def decode_coords_with_fr(coords: torch.Tensor, feats: dict,
                           reference_sequence: str, fr_positions) -> dict:
+    from ..native_atom14.decode import fr_check
+
     sequence, invalid = decode_coords(coords, feats)
     fr = fr_check(sequence, reference_sequence, tuple(fr_positions))
     return {"sequence": sequence, "contains_invalid": invalid,

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import torch
 
-from ..native_atom14.masks import design_token_offset, residue_atom_masks
 from .query_fit import forward_peer_prediction, local_distill_loss
 
 MASK_MODES = ("all_design", "changed_only")
@@ -22,6 +21,8 @@ def positions_for_mask(mask_mode: str, record, design_positions):
 
 
 def supervision_mask(feats: dict, positions, design_positions) -> torch.Tensor:
+    from ..native_atom14.masks import design_token_offset, residue_atom_masks
+
     offset = design_token_offset(feats["token_index"], feats["design_mask"],
                                  design_positions)
     masks = residue_atom_masks(feats["atom_to_token"], feats["fake_atom_mask"],
