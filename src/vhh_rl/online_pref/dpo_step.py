@@ -42,7 +42,9 @@ def changed_position_dpo_step(policy_sm, ref_sm, feats, pair: OnlinePreferencePa
                                [p + offset for p in positions])
     w = torch.full((len(positions),), 1.0 / len(positions),
                    device=noise.device, dtype=torch.float32)
+    device = sigma.device
     return compute_weighted_cf_dpo_step(
-        policy_sm, ref_sm, feats, pair.winner_coords, pair.loser_coords,
+        policy_sm, ref_sm, feats,
+        pair.winner_coords.to(device), pair.loser_coords.to(device),
         masks, w, network_condition_kwargs, beta=beta,
         sigma=sigma, noise=noise)

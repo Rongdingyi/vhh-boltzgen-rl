@@ -98,7 +98,7 @@ def run_online_arm(cfg: OnlineArmConfig, deps: dict | None = None) -> dict:
     """Train one online arm and return the round summary."""
     deps = {**_default_deps(), **(deps or {})}
     from .dpo_step import changed_position_dpo_step
-    from .query_utils import network_kwargs_for_pair, pair_feats
+    from .query_utils import network_kwargs_for_pair
 
     torch.manual_seed(cfg.seed)
     output_dir = Path(cfg.output_dir)
@@ -153,10 +153,11 @@ def run_online_arm(cfg: OnlineArmConfig, deps: dict | None = None) -> dict:
 
         for spec in schedule:
             pair = next(p for p in pairs if p.pair_id == spec.pair_id)
-            feats = pair_feats(pair)
             kwargs = network_kwargs_for_pair(pair, device=DEVICE)
+            feats = kwargs["feats"]
             sigma = deps["sample_sigma"](pair, spec, cfg, student)
-            noise = sample_standard_noise_like(pair.winner_coords, spec.noise_seed)
+            noise = sample_standard_noise_like(pair.winner_coords.to(DEVICE),
+                                               spec.noise_seed)
             seed_augmentation(spec.augmentation_seed)
             out = changed_position_dpo_step(
                 student.structure_module, reference.structure_module, feats, pair,
