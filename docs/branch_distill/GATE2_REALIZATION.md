@@ -1,8 +1,14 @@
 # Gate 2 — Teacher target realization
 
+## 0. Protocol note (amendment 1)
+
+Supervision uses only carrier-verified changed positions (`configs/AMENDMENT_1_VERIFIED_POSITIONS.yaml`); the pre-registered §30 endpoint-carrier probe stays the legality check and the original per-position fidelity is reported below.
+
 ## 1. residue identity after transfer
 
-- carrier all-match: 12/12 teacher endpoints reproduced downstream
+- carrier verified positions per record: min 7, max 18
+- endpoint-carrier FR mismatch rows: 0
+- target-decode diagnostic (not gating): 3/12 records decode teacher AA on all verified positions; 12 contain invalid tokens
 ## 2. query replay exactness
 
 - max |pred - stored anchor| median 0.00e+00

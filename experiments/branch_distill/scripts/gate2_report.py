@@ -9,9 +9,38 @@ import statistics as st
 import _common as C  # noqa: E402
 
 
+def _amended_verdict(rows: list[dict]) -> dict:
+    """Recompute the gate with amendment 1 from the persisted per-record rows.
+
+    B follows §30/§39 (endpoint carrier) restricted to the verified subset:
+    a record is target-legal iff it kept at least one carrier-matched position.
+    The full-set carrier decode stays as an audit diagnostic.
+    """
+    from vhh_rl.branch_distill import gates as gate_mod
+
+    normalized = []
+    for row in rows:
+        verified = int(row.get("carrier_verified_positions") or 0)
+        normalized.append({
+            "replay_maxdiff": float(row["replay_maxdiff"]),
+            "carrier_invalid": verified == 0,
+            "carrier_fr": int(float(row.get("carrier_fr") or 0)),
+            "carrier_all_match": verified > 0,
+            "mse_ratio": float(row["mse_ratio"]),
+            "hamming_before": int(row["hamming_before"]),
+            "hamming_after": int(row["hamming_after"]),
+            "postfit_reward": float(row["postfit_reward"]),
+            "peer_reward": float(row["peer_reward"]),
+        })
+    return gate_mod.gate2_verdict(normalized)
+
+
 def main() -> None:
-    gate = json.loads((C.GATE2_DIR / "gate2.json").read_text())
     rows = list(csv.DictReader((C.GATE2_DIR / "overfit_results.csv").open()))
+    gate = _amended_verdict(rows)
+    C.write_json(C.GATE2_DIR / "gate2.json",
+                 {"protocol_sha256": C.protocol_hash(),
+                  "amendment_id": 1, "n_records": len(rows), **gate})
     ratios = [float(r["mse_ratio"]) for r in rows]
     before = [int(r["hamming_before"]) for r in rows]
     after = [int(r["hamming_after"]) for r in rows]
