@@ -140,7 +140,7 @@ def collect_case_rollouts(
     started = time.time()
     try:
         if run_root.exists():
-            if "cf_opsd" not in str(run_root):
+            if not any(tag in str(run_root) for tag in ("cf_opsd", "branch_distill")):
                 raise RuntimeError(f"refusing to clear unexpected run dir {run_root}")
             shutil.rmtree(run_root)
         run_root.mkdir(parents=True, exist_ok=True)
