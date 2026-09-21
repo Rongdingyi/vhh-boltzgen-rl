@@ -31,7 +31,7 @@ def main() -> None:
             continue
         run_root = out / arm
         shutil.rmtree(run_root, ignore_errors=True)
-        payload = evaluate(C.HELDOUT_CASES, ckpt, f"branch_{arm}",
+        payload = evaluate(C.heldout8(), ckpt, f"branch_{arm}",
                            num_samples=NUM_SAMPLES,
                            seed_offset=C.EVAL_SEED_OFFSET, run_root=run_root)
         n = sum(v["n"] for v in payload["cases"].values())

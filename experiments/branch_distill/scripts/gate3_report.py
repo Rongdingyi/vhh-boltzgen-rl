@@ -20,11 +20,11 @@ def main() -> None:
         rounds = C.GATE3_DIR / arm / "rounds.json"
         if rounds.is_file():
             rows = json.loads(rounds.read_text())
-            query_counts[arm] = rows[-1]["queries_cumulative"] if rows else 0
+            query_counts[arm] = sum(r.get("queries_cumulative", 0) for r in rows)
     rewards = {arm.upper() if arm != "base" else "base": v["reward_mean"]
                for arm, v in payload.items()}
     per_case = {}
-    for case_id in C.HELDOUT_CASES:
+    for case_id in C.heldout8():
         per_case[case_id] = {arm.upper() if arm != "base" else "base":
                              v["per_case"].get(case_id)
                              for arm, v in payload.items()}
@@ -45,7 +45,7 @@ def main() -> None:
         delta_base = v["reward_mean"] - base if base is not None else None
         delta_a = v["reward_mean"] - arm_a if arm_a is not None else None
         wins = ties = losses = 0
-        for case_id in C.HELDOUT_CASES:
+        for case_id in C.heldout8():
             if arm == "a":
                 continue
             left = v["per_case"].get(case_id)

@@ -22,6 +22,16 @@ DEVICE = "cuda"
 
 TRAIN_CASES = ["sab2_6u52_c", "sab2_7sl5_d", "sab2_7nqk_b", "sab2_6mqe_h"]
 HELDOUT_CASES = ["sab2_4hf5_h", "sab2_4mwf_h", "sab2_5mp6_h", "sab2_6cvk_b2"]
+
+
+def heldout8() -> list[str]:
+    """§50: Gate 3 evaluates all 8 held-out (test-split) cases."""
+    out = []
+    for line in MANIFEST.open():
+        row = json.loads(line)
+        if row.get("split") == "test":
+            out.append(row["case_id"])
+    return sorted(out)
 K_SIBLINGS = 8
 SAMPLING_STEPS = 50
 CANDIDATE_PROGRESS = [0.60, 0.70, 0.80, 0.90]
