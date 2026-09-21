@@ -89,10 +89,15 @@ def attach_verified(pairs, cfg) -> None:
         matches = carrier_positions_match(carrier["sequence"], pair.winner_sequence,
                                           pair.changed_positions_all)
         verified = verified_changed_positions(matches, pair.changed_positions_all)
-        if not verified:
-            raise SystemExit(f"{pair.pair_id}: no carrier-verified positions")
-        pair.changed_positions_verified = tuple(verified)
-        pair.meta["carrier_original_rate"] = len(verified) / len(matches)
+        if verified:
+            pair.changed_positions_verified = tuple(verified)
+        else:
+            # no carrier-matched position: the update is logged and skipped by
+            # the trainer, and the skipped count is reported (V only)
+            pair.changed_positions_verified = None
+            pair.meta["verified_empty"] = True
+        pair.meta["carrier_original_rate"] = (len(verified) / len(matches)
+                                              if matches else 0.0)
 
 
 def arm_offline(seed: int) -> dict:

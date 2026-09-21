@@ -151,8 +151,17 @@ def run_online_arm(cfg: OnlineArmConfig, deps: dict | None = None) -> dict:
         if not pairs:
             raise SystemExit(f"arm {cfg.arm} round {round_index}: no eligible pairs")
 
+        skipped_updates = 0
         for spec in schedule:
             pair = next(p for p in pairs if p.pair_id == spec.pair_id)
+            if cfg.support == "verified" and not pair.changed_positions_verified:
+                skipped_updates += 1
+                log({"phase": "phase0", "arm": cfg.arm, "seed": cfg.seed,
+                     "round": round_index, "update": spec.update_index,
+                     "pair_id": pair.pair_id, "case_id": pair.case_id,
+                     "support_mode": cfg.support, "skipped": True,
+                     "reason": "no carrier-verified positions"})
+                continue
             kwargs = network_kwargs_for_pair(pair, device=DEVICE)
             feats = kwargs["feats"]
             sigma = deps["sample_sigma"](pair, spec, cfg, student)
@@ -201,6 +210,8 @@ def run_online_arm(cfg: OnlineArmConfig, deps: dict | None = None) -> dict:
                                        output_dir / f"behavior_r{round_index}.pt",
                                        {"arm": cfg.arm, "round": round_index})
         stats = (pair_stats(pairs, deps["design_positions"]))
+        stats["n_skipped_updates"] = skipped_updates
+        stats["effective_updates"] = cfg.updates_per_round - skipped_updates
         reward_queries_total += reward_queries
         pair_records_total += len(pairs)
         rounds_log.append({
@@ -224,6 +235,8 @@ def run_online_arm(cfg: OnlineArmConfig, deps: dict | None = None) -> dict:
     summary = {"arm": cfg.arm, "seed": cfg.seed, "rounds": rounds_log,
                "reward_queries_total": reward_queries_total,
                "pair_records_total": pair_records_total,
+               "skipped_updates_total": sum(r.get("n_skipped_updates", 0)
+                                            for r in rounds_log),
                "updates": cfg.updates_per_round * cfg.rounds}
     (output_dir / "rounds.json").write_text(json.dumps(summary, indent=1))
     return summary
