@@ -1,0 +1,67 @@
+version: 1
+method: online_pref_spatiotemporal_dpo
+repo_commit: 399c427d5c071bd8466d44d30b275ce2b861bf15
+boltzgen_commit: a3149cf18eeb58648d1abbb27539bd73f746cdda
+base_checkpoint: /share/home/rongdingyi/programs/proteingen/boltzgen/ckpts/boltzgen1_diverse.ckpt
+base_checkpoint_sha256: 360af8bd6e59527ff6ec25dd81253967f3bd3567d200053b10680634751f8e3c
+manifest_sha256: 7d143bedee5eba3a70f817a788941037024134078ba173533cc2877cf3fa3e20
+reward_scorer:
+  name: cdr_margin_guarded
+  cache: runs/cf_opsd/reward_cache.sqlite
+train_cases:
+- sab2_6u52_c
+- sab2_7sl5_d
+- sab2_7nqk_b
+- sab2_6mqe_h
+heldout8_cases:
+- sab2_4hf5_h
+- sab2_4mwf_h
+- sab2_5mp6_h
+- sab2_6cvk_b2
+- sab2_6e62_b
+- sab2_6oq8_d
+- sab2_6s2i_a
+- sab2_8dpm_d
+k_siblings: 8
+sampling_steps: 50
+phase0_branch_progress: 0.6
+pair_policies:
+- best_vs_worst
+- best_vs_median
+min_reward_gap: 0.3
+rounds: 4
+updates_per_round: 25
+behavior_ema_decay: 0.99
+optimizer:
+  beta: 10.0
+  lr: 1.0e-05
+  max_grad_norm: 1.0
+train_seeds:
+- 20260915
+- 43
+- 44
+eval_seed_offset: 700000
+gate_thresholds:
+  phase0:
+    min_mean_delta: 0.3
+    min_seeds_positive: 2
+    min_cases_ge: 4
+    max_invalid: 0.01
+  phase1:
+    min_suffix_full: 0.25
+    min_suffix_prefix: 0.5
+    max_prefix_full: 0.1
+  phase2:
+    min_suffix_full: 0.3
+  phase3:
+    min_p80_p60: 0.2
+    min_eligible_ratio: 0.75
+  phase4:
+    min_minedit_rank: 0.2
+  final:
+    min_final_offline: 0.5
+    min_final_online: 0.25
+phase0_arm_definitions:
+  A: offline fixed diff_only pairs, all changed positions, 100 updates
+  B: online sibling pairs, all changed positions, full sigma
+  V: same pair bank/schedule as B, verified (carrier) support control
