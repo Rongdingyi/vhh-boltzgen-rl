@@ -12,7 +12,7 @@ ROOT=/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl
 export PYTHONPATH="$ROOT/src:/share/home/rongdingyi/programs/proteingen/boltzgen/src"
 export HF_HUB_OFFLINE=1 LAYERNORM_TYPE=torch CUBLAS_WORKSPACE_CONFIG=:4096:8
 PY=/share/home/rongdingyi/.conda/envs/vhh-guidance/bin/python
-STAGE=${STAGE:?set STAGE=gate1-prefix|gate1-probe|gate2-build|gate2-overfit|gate3|gate3-all|gate3-eval}
+STAGE=${STAGE:?set STAGE=gate1-prefix|gate1-probe|gate2-build|gate2-overfit|gate3|gate3-all|gate3-bcd|gate3-eval}
 cd "$ROOT/experiments/branch_distill/scripts"
 case "$STAGE" in
   gate1-prefix)  $PY -u capture_prefix_bank.py ;;
@@ -24,6 +24,8 @@ case "$STAGE" in
     $PY -u gate3_train.py --arm "$ARM" ;;
   gate3-all)
     for arm in a b c d; do $PY -u gate3_train.py --arm "$arm"; done ;;
+  gate3-bcd)
+    for arm in b c d; do $PY -u gate3_train.py --arm "$arm"; done ;;
   gate3-eval)    $PY -u gate3_eval.py ;;
   *) echo "unknown STAGE=$STAGE" >&2; exit 2 ;;
 esac

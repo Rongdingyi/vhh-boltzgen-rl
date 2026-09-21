@@ -202,7 +202,9 @@ def run_online_update(arm: str, student, reference, records, cfg: Gate3Config,
         raise RuntimeError(f"arm {arm}: no eligible online records")
     record = rng.choice(records)
     from .query_fit import network_kwargs
-    network = network_kwargs(record.conditioning, record.branch_count, device=DEVICE)
+    # Arm B optimizes a single winner/loser pair: the DPO forward is batch 1 even
+    # though the pair was discovered inside a K-sibling group.
+    network = network_kwargs(record.conditioning, 1, device=DEVICE)
     design_positions = record.meta.get("design_positions") or ()
     if arm == "B":
         teacher = record.meta["teacher_endpoint"].to(DEVICE)
