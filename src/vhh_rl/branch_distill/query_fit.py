@@ -23,17 +23,21 @@ def network_kwargs(conditioning: dict, multiplicity: int, device=DEVICE) -> dict
     ready = (all(key in conditioning for key in required)
              and isinstance(conditioning.get("feats"), dict)
              and isinstance(conditioning.get("diffusion_conditioning"), dict))
+    def _move(value):
+        if torch.is_tensor(value):
+            return value.to(device)
+        if isinstance(value, dict):
+            return {k: _move(v) for k, v in value.items()}
+        return value
+
     if ready:
-        from ..native_atom14.dpo_trainer import move_conditioning
-        payload = {key: conditioning[key] for key in required}
-        payload = move_conditioning(payload, device=device)
+        try:
+            from ..native_atom14.dpo_trainer import move_conditioning
+            payload = {key: conditioning[key] for key in required}
+            payload = move_conditioning(payload, device=device)
+        except ImportError:      # CPU-only environment without the BoltzGen stack
+            payload = _move({key: conditioning[key] for key in required})
     else:
-        def _move(value):
-            if torch.is_tensor(value):
-                return value.to(device)
-            if isinstance(value, dict):
-                return {k: _move(v) for k, v in value.items()}
-            return value
         payload = _move({key: conditioning[key] for key in conditioning
                          if key in required or key == "feats"})
     payload["multiplicity"] = multiplicity

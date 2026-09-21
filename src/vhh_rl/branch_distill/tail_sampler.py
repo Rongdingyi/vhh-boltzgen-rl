@@ -97,17 +97,21 @@ def continue_from_state(
     # captured conditioning stores partials as {"__partial__": ...}: reuse the
     # shared move_conditioning so callables and tensors are rebuilt correctly
     required = ("s_inputs", "s_trunk", "feats", "diffusion_conditioning")
+    def _move(value):
+        if torch.is_tensor(value):
+            return value.to(device)
+        if isinstance(value, dict):
+            return {k: _move(v) for k, v in value.items()}
+        return value
+
     if all(key in network_condition_kwargs for key in required):
-        from ..native_atom14.dpo_trainer import move_conditioning
-        network_condition_kwargs = move_conditioning(network_condition_kwargs,
-                                                     device=device)
+        try:
+            from ..native_atom14.dpo_trainer import move_conditioning
+            network_condition_kwargs = move_conditioning(network_condition_kwargs,
+                                                         device=device)
+        except ImportError:   # CPU-only environment without the BoltzGen stack
+            network_condition_kwargs = _move(network_condition_kwargs)
     else:  # lightweight test doubles: move tensors recursively instead
-        def _move(value):
-            if torch.is_tensor(value):
-                return value.to(device)
-            if isinstance(value, dict):
-                return {k: _move(v) for k, v in value.items()}
-            return value
         network_condition_kwargs = _move(network_condition_kwargs)
 
     sigmas, gammas, step_scales, noise_scales = schedule_arrays(
