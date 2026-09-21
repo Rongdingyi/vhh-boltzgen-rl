@@ -83,7 +83,9 @@ def attach_verified(pairs, cfg) -> None:
     for pair in pairs:
         case = cases[pair.case_id]
         feats = pair.conditioning["feats"]
-        carrier = carrier_audit(pair.winner_coords, pair.loser_coords, feats,
+        # carrier_audit(peer_endpoint, teacher_endpoint, ...): the winner is the
+        # teacher, the loser is the peer whose anchor receives the geometry
+        carrier = carrier_audit(pair.loser_coords, pair.winner_coords, feats,
                                 pair.changed_positions_all, case.full_sequence,
                                 case.fr_positions)
         matches = carrier_positions_match(carrier["sequence"], pair.winner_sequence,
