@@ -34,6 +34,9 @@ case "$STAGE" in
       rm -rf "$ROOT/runs/online_pref/phase0/seed_${seed}/V"
       $PY -u phase0_train.py --arm v --seed "$seed"
     done ;;
-  phase0-eval) $PY -u phase0_eval.py ;;
+  phase0-eval)
+    ARMS_ARG=""; [ -n "${ARMS:-}" ] && ARMS_ARG="--arms $ARMS"
+    SEEDS_ARG=""; [ -n "${SEEDS:-}" ] && SEEDS_ARG="--seeds $SEEDS"
+    $PY -u phase0_eval.py $SEEDS_ARG $ARMS_ARG ;;
   *) echo "unknown STAGE=$STAGE" >&2; exit 2 ;;
 esac
