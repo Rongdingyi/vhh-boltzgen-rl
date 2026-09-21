@@ -21,6 +21,11 @@ case "$STAGE" in
   phase0)
     for seed in 20260915 43 44; do
       for arm in a b v; do
+        out="$ROOT/runs/online_pref/phase0/seed_${seed}/$(echo $arm | tr a-z A-Z)"
+        if [ -f "$out/student_r4.pt" ]; then
+          echo "[skip] seed $seed arm $arm already complete"
+          continue
+        fi
         $PY -u phase0_train.py --arm "$arm" --seed "$seed"
       done
     done ;;

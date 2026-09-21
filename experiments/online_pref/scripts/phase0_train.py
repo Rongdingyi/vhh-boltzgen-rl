@@ -43,7 +43,7 @@ def build_groups_factory(cases, scorer, seed: int):
                                           sampling_steps=C.SAMPLING_STEPS,
                                           diffusion_batch_size=C.K_SIBLINGS)
             adapter.num_designs = 1
-            roll_dir = Path(cfg["output_dir"]) / f"rollout_r{round_index}" / case_id
+            roll_dir = Path(cfg.output_dir) / f"rollout_r{round_index}" / case_id
             grad_was = torch.is_grad_enabled()
             try:
                 _traj, info = collect_case_rollouts(
