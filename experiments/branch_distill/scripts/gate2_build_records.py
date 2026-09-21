@@ -67,8 +67,9 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(all_audits)
     eligible_rows = [a for a in all_audits if a.get("eligible")]
-    carrier_ok = all(a.get("carrier_all_match") and not a.get("carrier_invalid")
-                     and a.get("carrier_fr") == 0 for a in eligible_rows)
+    carrier_ok = all(a.get("carrier_verified_positions", 0) > 0
+                     and not a.get("carrier_invalid") and a.get("carrier_fr") == 0
+                     for a in eligible_rows)
     summary = {
         "protocol_sha256": C.protocol_hash(),
         "selected_progress": selected["selected_progress"],
@@ -77,11 +78,28 @@ def main() -> None:
         "n_audit_rows": len(all_audits),
         "n_eligible_rows": len(eligible_rows),
         "carrier_pass": bool(carrier_ok),
+        "carrier_original_pooled_rate": _pooled_rate(all_audits),
+        "amendment_id": 1,
+        "amendment_sha256": C.sha256(C.CONFIG_DIR / "AMENDMENT_1_VERIFIED_POSITIONS.yaml"),
     }
     C.write_json(C.GATE2_DIR / "record_build.json", summary)
     print(json.dumps(summary, indent=1))
     if not carrier_ok:
         sys.exit(1)   # §30: STOP, no radius sweep
+
+
+def _pooled_rate(audits: list[dict]) -> float | None:
+    import ast
+    total = matched = 0
+    for audit in audits:
+        matches = audit.get("carrier_matches")
+        if isinstance(matches, str):
+            matches = ast.literal_eval(matches)
+        if not matches:
+            continue
+        total += len(matches)
+        matched += sum(1 for v in matches.values() if v)
+    return (matched / total) if total else None
 
 
 def _group_from_row(row: dict) -> BranchGroup:

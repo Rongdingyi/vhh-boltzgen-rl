@@ -89,6 +89,10 @@ def main() -> None:
 
         row = {
             "record_id": record.record_id, "case_id": record.case_id,
+            "carrier_invalid": record.meta.get("carrier_invalid"),
+            "carrier_fr": record.meta.get("carrier_fr"),
+            "carrier_all_match": record.meta.get("carrier_all_match"),
+            "carrier_verified_positions": len(record.meta.get("carrier_verified_positions", ())),
             "replay_maxdiff": replay_maxdiff,
             "initial_masked_mse": result["initial_masked_mse"],
             "final_masked_mse": result["final_masked_mse"],

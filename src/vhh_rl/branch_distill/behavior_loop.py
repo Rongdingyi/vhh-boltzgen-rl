@@ -19,8 +19,8 @@ from .online_diff_dpo import online_dpo_step
 from .online_distill import MASK_MODES, online_distill_step
 from .query_fit import record_target_mask
 from .teacher_select import eligible, select_teacher_peer
-from .local_target import build_target, carrier_positions_match, carrier_audit
-from .local_target import changed_design_positions
+from .local_target import (build_target, carrier_audit, carrier_positions_match,
+                           changed_design_positions, verified_changed_positions)
 
 ROOT = Path("/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl")
 DEVICE = "cuda"
@@ -87,14 +87,16 @@ def build_online_records(groups, cfg: Gate3Config, design_positions,
                 continue
             teacher = group.siblings[selection["teacher_index"]]
             peer = group.siblings[selection["peer_index"]]
-            target, touched = build_target(peer.anchor_coords, teacher.endpoint_coords,
-                                           feats, selection["changed_positions"])
+            # Amendment 1: audit the FULL changed set, then supervise only the
+            # carrier-verified subset (target geometry is rebuilt on it).
             carrier = carrier_audit(peer.endpoint_coords, teacher.endpoint_coords,
                                     feats, selection["changed_positions"],
                                     reference_sequence, fr_positions)
             matches = carrier_positions_match(carrier["sequence"],
                                               selection["teacher_sequence"],
                                               selection["changed_positions"])
+            verified = verified_changed_positions(matches,
+                                                  selection["changed_positions"])
             audit.update({
                 "teacher_index": selection["teacher_index"],
                 "peer_index": selection["peer_index"],
@@ -104,14 +106,25 @@ def build_online_records(groups, cfg: Gate3Config, design_positions,
                 "carrier_fr": carrier["fr_mismatch"],
                 "carrier_all_match": bool(all(matches.values())),
                 "carrier_matches": matches,
+                "amendment_id": 1,
+                "carrier_verified_positions": len(verified),
+                "carrier_original_rate": (len(verified) / len(matches)) if matches else 0.0,
             })
+            if not verified:
+                audit["eligible"] = False
+                audits.append(audit)
+                continue
+            target, touched = build_target(peer.anchor_coords, teacher.endpoint_coords,
+                                           feats, verified)
             audits.append(audit)
-            record = _make_record(group, selection, target, touched, carrier)
+            record = _make_record(group, {**selection,
+                                          "changed_positions": tuple(verified)},
+                                  target, touched, carrier, verified)
             records.append(record)
     return records, audits
 
 
-def _make_record(group, selection, target, touched, carrier):
+def _make_record(group, selection, target, touched, carrier, verified=None):
     from .types import DistillRecord
     teacher = group.siblings[selection["teacher_index"]]
     peer = group.siblings[selection["peer_index"]]
@@ -143,6 +156,11 @@ def _make_record(group, selection, target, touched, carrier):
               "peer_endpoint": peer.endpoint_coords,
               "design_positions": tuple(group.meta.get("design_positions", ())),
               "sampling_scales": dict(group.meta.get("sampling_scales", {})),
+              "amendment_id": 1,
+              "carrier_verified_positions": tuple(verified or selection["changed_positions"]),
+              "carrier_invalid": bool(carrier["contains_invalid"]),
+              "carrier_fr": int(carrier["fr_mismatch"]),
+              "carrier_all_match": True,   # verified subset decodes by construction
               }, 
     )
 

@@ -1,0 +1,28 @@
+# Pre-registration amendment 1 (approved by PI before Gate 2 execution)
+#
+# context
+# -------
+# The frozen §30 carrier hard gate requires 100% of ALL changed positions to
+# decode back to the teacher AA after residue-local frame transfer.  Measured
+# pooled per-position fidelity on the Gate 1 records is 204/228 = 89.5%,
+# consistent with the paper-stage geometry-lift acceptance (80-82% per site).
+# Demanding 0.895^n for n=7..21 positions is effectively unreachable.
+#
+# amendment
+# ---------
+# The distillation target (and the Arm B/C/D changed-position set) uses only
+# the carrier-verified subset of changed positions:
+#     M_verified = {p in M : carrier_decode(p) == teacher_AA(p)}
+# The carrier audit still reports the original per-position fidelity
+# (carrier_original_rate) for transparency.  Eligibility now requires
+# |M_verified| >= 1.  All other Gate 2/3 thresholds and definitions are
+# unchanged.
+#
+# scope
+# -----
+# applies_to: gate2 target construction, gate3 arm B/C/D supervision masks
+# frozen_protocol_sha256: c45308687969f675664684c48ae5ec0b261c1d47dc5a47bd2cb56c37a9bbdb29
+# date: 2026-09-17
+amendment_id: 1
+name: verified_positions_only
+approved_by: PI

@@ -50,6 +50,12 @@ def carrier_audit(peer_endpoint: torch.Tensor, teacher_endpoint: torch.Tensor,
             "carrier_coords": carrier}
 
 
+def verified_changed_positions(matches: dict, changed_positions) -> tuple[int, ...]:
+    """Amendment 1: keep only changed positions whose carrier decode matches
+    the teacher AA (the target is built on this verified subset)."""
+    return tuple(p for p in changed_positions if matches.get(p))
+
+
 def carrier_positions_match(carrier_sequence: str, teacher_sequence: str,
                             changed_positions) -> dict:
     """Per-position AA equality of carrier decode vs teacher endpoint sequence."""

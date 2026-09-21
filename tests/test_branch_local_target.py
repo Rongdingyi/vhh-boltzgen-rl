@@ -46,3 +46,12 @@ def test_target_mask_is_subset_of_fake_and_changed():
 def test_carrier_position_match_helper():
     matches = carrier_positions_match("MKA", "MKB", (0, 1, 2))
     assert matches == {0: True, 1: True, 2: False}
+
+
+def test_verified_changed_positions_keeps_only_matching_positions():
+    """Amendment 1: target supervision uses the carrier-verified subset."""
+    from vhh_rl.branch_distill.local_target import verified_changed_positions
+
+    matches = {24: True, 25: False, 26: False, 29: True}
+    assert verified_changed_positions(matches, (24, 25, 26, 29)) == (24, 29)
+    assert verified_changed_positions({}, (1, 2)) == ()
