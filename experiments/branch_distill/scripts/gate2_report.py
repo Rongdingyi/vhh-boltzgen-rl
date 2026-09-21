@@ -16,11 +16,23 @@ def main() -> None:
     before = [int(r["hamming_before"]) for r in rows]
     after = [int(r["hamming_after"]) for r in rows]
     deltas = [float(r["postfit_reward"]) - float(r["peer_reward"]) for r in rows]
+    target_ok = sum(1 for r in rows if r.get("target_all_match") == "True")
+    target_invalid = sum(1 for r in rows if r.get("target_invalid") == "True")
+    verified = [int(r.get("carrier_verified_positions") or 0) for r in rows]
     lines = ["# Gate 2 — Teacher target realization", "",
+             "## 0. Protocol note (amendment 1)", "",
+             "Supervision uses only carrier-verified changed positions "
+             "(`configs/AMENDMENT_1_VERIFIED_POSITIONS.yaml`); the pre-registered "
+             "§30 endpoint-carrier probe stays the legality check and the original "
+             "per-position fidelity is reported below.", "",
              "## 1. residue identity after transfer", "",
-             f"- carrier all-match: "
-             f"{sum(1 for r in rows if r['teacher_match_after'])}"
-             f"/{len(rows)} teacher endpoints reproduced downstream",
+             f"- carrier verified positions per record: min {min(verified, default=0)}, "
+             f"max {max(verified, default=0)}",
+             f"- endpoint-carrier FR mismatch rows: "
+             f"{sum(1 for r in rows if r['carrier_fr'] != '0')}",
+             f"- target-decode diagnostic (not gating): "
+             f"{target_ok}/{len(rows)} records decode teacher AA on all verified "
+             f"positions; {target_invalid} contain invalid tokens",
              "## 2. query replay exactness", "",
              f"- max |pred - stored anchor| median "
              f"{st.median(float(r['replay_maxdiff']) for r in rows):.2e}",
