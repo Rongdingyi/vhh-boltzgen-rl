@@ -14,6 +14,8 @@ from pathlib import Path
 
 import torch
 
+torch.set_float32_matmul_precision("high")  # same-query replay requires the sampler precision
+
 import _common as C  # noqa: E402
 from vhh_rl.branch_distill.behavior_loop import (
     Gate3Config, build_online_records, clear_round_dir, run_online_update,

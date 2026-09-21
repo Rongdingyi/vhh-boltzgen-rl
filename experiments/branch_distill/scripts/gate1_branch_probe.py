@@ -10,6 +10,8 @@ import sys
 
 import torch
 
+torch.set_float32_matmul_precision("high")  # same-query replay requires the sampler precision
+
 import _common as C  # noqa: E402
 from vhh_rl.branch_distill import gates  # noqa: E402
 from vhh_rl.branch_distill.branch_rollout import run_branch_group, slice_conditioning

@@ -7,6 +7,8 @@ import json
 
 import torch
 
+torch.set_float32_matmul_precision("high")  # same-query replay requires the sampler precision
+
 import _common as C  # noqa: E402
 
 

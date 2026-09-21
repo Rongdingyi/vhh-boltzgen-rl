@@ -9,6 +9,8 @@ import sys
 
 import torch
 
+torch.set_float32_matmul_precision("high")  # same-query replay requires the sampler precision
+
 import _common as C  # noqa: E402
 from vhh_rl.branch_distill import gates  # noqa: E402
 from vhh_rl.branch_distill.decode import decode_coords_with_fr
@@ -40,13 +42,16 @@ def main() -> None:
         case = cases[record.case_id]
         from vhh_rl.native_atom14.checkpoint import load_base_model
         base = load_base_model(C.BASE_CKPT, device=C.DEVICE)
+        base.eval()
 
-        # A) same-query replay gate (student == behavior)
-        pred = forward_peer_prediction(base, full_query_batch=record.full_query_batch,
-                                       sigma=record.meta["sigma"],
-                                       conditioning=record.conditioning,
-                                       multiplicity=record.branch_count,
-                                       peer_index=record.peer_index)
+        # A) same-query replay gate (student == behavior), evaluated exactly the
+        # way the anchor was produced: eval mode + no_grad + sampler precision
+        with torch.no_grad():
+            pred = forward_peer_prediction(base, full_query_batch=record.full_query_batch,
+                                           sigma=record.meta["sigma"],
+                                           conditioning=record.conditioning,
+                                           multiplicity=record.branch_count,
+                                           peer_index=record.peer_index)
         replay_maxdiff = float((pred.cpu() - record.peer_anchor).abs().max())
 
         # C) one-record finite fit from a fresh base student
