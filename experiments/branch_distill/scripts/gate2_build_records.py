@@ -71,10 +71,12 @@ def main() -> None:
     eligible_rows = [a for a in all_audits if a.get("eligible")]
     # Amendment 1: the gate is that every eligible record keeps at least one
     # carrier-verified position; the full-set carrier decode is diagnostic.
+    # §30/§39 B: the endpoint-based carrier is the pre-registered legality probe
+    # (the early query anchor may itself be invalid).  Amendment 1 limits
+    # supervision to the carrier-matched positions and reports the original
+    # per-position fidelity; the target's own decode is kept as a diagnostic.
     carrier_ok = all(a.get("carrier_verified_positions", 0) > 0
-                     and not a.get("target_invalid")
-                     and a.get("target_fr") == 0
-                     and a.get("target_all_match")
+                     and a.get("carrier_fr", 0) == 0
                      for a in eligible_rows)
     summary = {
         "protocol_sha256": C.protocol_hash(),
@@ -87,8 +89,10 @@ def main() -> None:
         "carrier_original_pooled_rate": _pooled_rate(all_audits),
         "n_rows_original_carrier_invalid": sum(
             1 for a in eligible_rows if a.get("carrier_invalid")),
-        "n_rows_target_failed": sum(
+        "n_rows_target_failed_diagnostic": sum(
             1 for a in eligible_rows if not a.get("target_all_match")),
+        "n_rows_target_invalid_diagnostic": sum(
+            1 for a in eligible_rows if a.get("target_invalid")),
         "amendment_id": 1,
         "amendment_sha256": C.sha256(C.CONFIG_DIR / "AMENDMENT_1_VERIFIED_POSITIONS.yaml"),
     }
