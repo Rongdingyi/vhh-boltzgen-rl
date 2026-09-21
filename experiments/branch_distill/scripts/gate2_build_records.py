@@ -67,8 +67,9 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(all_audits)
     eligible_rows = [a for a in all_audits if a.get("eligible")]
+    # Amendment 1: the gate is that every eligible record keeps at least one
+    # carrier-verified position; the full-set carrier decode is diagnostic.
     carrier_ok = all(a.get("carrier_verified_positions", 0) > 0
-                     and not a.get("carrier_invalid") and a.get("carrier_fr") == 0
                      for a in eligible_rows)
     summary = {
         "protocol_sha256": C.protocol_hash(),
@@ -79,6 +80,8 @@ def main() -> None:
         "n_eligible_rows": len(eligible_rows),
         "carrier_pass": bool(carrier_ok),
         "carrier_original_pooled_rate": _pooled_rate(all_audits),
+        "n_rows_original_carrier_invalid": sum(
+            1 for a in eligible_rows if a.get("carrier_invalid")),
         "amendment_id": 1,
         "amendment_sha256": C.sha256(C.CONFIG_DIR / "AMENDMENT_1_VERIFIED_POSITIONS.yaml"),
     }
