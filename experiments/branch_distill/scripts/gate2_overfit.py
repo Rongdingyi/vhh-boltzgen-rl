@@ -54,8 +54,7 @@ def main() -> None:
         student = result["student"]
 
         # D) downstream replay from the same pre_state/seed with the student
-        feats_dev = {k: (v.to(C.DEVICE) if torch.is_tensor(v) else v)
-                     for k, v in record.conditioning["feats"].items()}
+        from vhh_rl.branch_distill.query_fit import network_kwargs
         out = continue_from_state(
             student.structure_module,
             pre_state=record.pre_state.to(C.DEVICE),
@@ -63,13 +62,8 @@ def main() -> None:
             num_sampling_steps=C.SAMPLING_STEPS,
             multiplicity=record.branch_count,
             atom_mask=record.conditioning["feats"]["atom_pad_mask"].to(C.DEVICE),
-            network_condition_kwargs={
-                "s_inputs": record.conditioning["s_inputs"].to(C.DEVICE),
-                "s_trunk": record.conditioning["s_trunk"].to(C.DEVICE),
-                "feats": feats_dev,
-                "diffusion_conditioning":
-                    record.conditioning["diffusion_conditioning"].to(C.DEVICE),
-            },
+            network_condition_kwargs=network_kwargs(
+                record.conditioning, record.branch_count, device=C.DEVICE),
             seed=record.group_seed,
             step_scale=(record.meta.get("sampling_scales") or {}).get("step_scale"),
             noise_scale=(record.meta.get("sampling_scales") or {}).get("noise_scale"))
