@@ -2,29 +2,29 @@
 
 | arm | reward8 | Δbase | ΔA | W/T/L vs A | invalid | FR | queries |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Base | +0.795 | +0.000 | -1.420 | 1/0/3 | 0 | 0 | 0 |
-| A Offline changed DPO | +2.215 | +1.420 | +0.000 | - | 0 | 0 | 0 |
-| B Online changed DPO | +3.804 | +3.009 | +1.589 | 3/0/1 | 0 | 0 | 8 |
-| C Sibling distill all CDR | +1.065 | +0.270 | -1.150 | 0/0/4 | 0 | 0 | 8 |
-| D Sibling distill changed residues | +1.373 | +0.578 | -0.842 | 1/0/3 | 0 | 0 | 8 |
+| Base | +1.271 | +0.000 | -1.205 | 2/0/6 | 0 | 0 | 0 |
+| A Offline changed DPO | +2.476 | +1.205 | +0.000 | - | 0 | 0 | 0 |
+| B Online changed DPO | +3.070 | +1.798 | +0.594 | 4/0/4 | 0 | 0 | 32 |
+| C Sibling distill all CDR | +1.358 | +0.086 | -1.118 | 1/0/7 | 0 | 0 | 32 |
+| D Sibling distill changed residues | +1.556 | +0.285 | -0.920 | 3/0/5 | 0 | 0 | 32 |
 
 ## 组件解释（§55）
 
-- B - A = +1.589（on-policy pair refresh）
-- D - B = -2.431
-- D - C = +0.307
-- D - A = -0.842
+- B - A = +0.594（on-policy pair refresh）
+- D - B = -1.514
+- D - C = +0.198
+- D - A = -0.920
 
 ## Gate（§54/§56）
 
 ```json
 {
  "verdict": "NO_GO",
- "delta_D_A": -0.8424436057102866,
- "delta_D_B": -2.4313063612789847,
- "delta_D_C": 0.30738118168665096,
- "cases_D_ge_A": 1,
- "n_cases": 4,
+ "delta_D_A": -0.9201865532377269,
+ "delta_D_B": -1.5138378227420617,
+ "delta_D_C": 0.19817563131800853,
+ "cases_D_ge_A": 3,
+ "n_cases": 8,
  "invalid_rate": 0.0,
  "fr_mismatch": 0
 }
