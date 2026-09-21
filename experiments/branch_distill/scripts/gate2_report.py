@@ -78,7 +78,12 @@ def main() -> None:
              "## 5. reward safety", "",
              f"- median(postfit - peer) = {st.median(deltas):+.3f}, "
              f"safe {sum(1 for d in deltas if d >= -0.20)}/{len(rows)}",
-             "## 6. 失败发生在哪一级", ""]
+             "## 5b. 历史记录（不可改写）", "",
+             "- **Original preregistered target legality gate: FAIL** "
+             "(12/12 query-level targets decode invalid tokens).",
+             "- Amendment 1 is an *exploratory continuation using endpoint-carrier "
+             "verified positions*; it must not be reported as a clean Gate 2 PASS.",
+             "", "## 6. 失败发生在哪一级", ""]
     for key in ("A_replay", "B_target", "C_learnability", "D_downstream", "E_safety"):
         lines.append(f"- {key}: {'PASS' if gate[key] else 'FAIL'}")
     lines += ["", f"verdict: **{'PASS' if gate['pass'] else 'FAIL'}**", "",

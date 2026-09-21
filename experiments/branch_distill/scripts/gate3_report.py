@@ -20,7 +20,11 @@ def main() -> None:
         rounds = C.GATE3_DIR / arm / "rounds.json"
         if rounds.is_file():
             rows = json.loads(rounds.read_text())
-            query_counts[arm] = sum(r.get("queries_cumulative", 0) for r in rows)
+            # P0 correction: prefer the corrected endpoint scorer-query count
+            query_counts[arm] = sum(
+                r.get("reward_queries_cumulative",
+                      r.get("reward_queries_round", r.get("queries_cumulative", 0)))
+                for r in rows)
     rewards = {arm.upper() if arm != "base" else "base": v["reward_mean"]
                for arm, v in payload.items()}
     per_case = {}
@@ -34,6 +38,10 @@ def main() -> None:
                                   invalid_rate=invalid / max(1, n_total),
                                   fr_mismatch=sum(v["fr"] for v in payload.values()))
     lines = ["# Gate 3 — component comparison", "",
+             "> **Correction note (P0, online-pref task book §2.1).** "
+             "Historical Gate3 reward values unchanged. The old 'queries' field "
+             "counted pair records rather than scored sibling endpoints; the "
+             "endpoint scorer-query count is recomputed from the round logs.", "",
              "| arm | reward8 | Δbase | ΔA | W/T/L vs A | invalid | FR | queries |",
              "|---|---:|---:|---:|---:|---:|---:|---:|"]
     base = rewards.get("base")

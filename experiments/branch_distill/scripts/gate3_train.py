@@ -160,11 +160,20 @@ def online_arm(arm: str, cfg: Gate3Config, out_dir: Path, seed: int) -> dict:
         save_native_checkpoint(C.BASE_CKPT, behavior,
                                out_dir / f"behavior_r{round_idx}.pt",
                                {"arm": arm, "round": round_idx})
+        reward_queries_round = sum(
+            1 for g in groups for sib in g.siblings if sib.reward is not None)
+        n_pair_records_round = len(records)
         rounds_log.append({
             "round": round_idx, "updates": cfg.updates_per_round,
-            "queries_cumulative": len(records),
-            "n_valid_siblings": sum(len([s for s in g.siblings
-                                         if s.reward is not None]) for g in groups),
+            # P0 correction: reward scorer queries vs training pair records are
+            # separate quantities; the old single field counted records only
+            "reward_queries_round": reward_queries_round,
+            "reward_queries_cumulative": sum(r["reward_queries_round"]
+                                             for r in rounds_log) + reward_queries_round,
+            "pair_records_round": n_pair_records_round,
+            "pair_records_cumulative": sum(r["pair_records_round"]
+                                           for r in rounds_log) + n_pair_records_round,
+            "n_valid_siblings": reward_queries_round,
             "param_drift": parameter_drift(student, reference)["total"],
         })
         print(f"[gate3-{arm}] round {round_idx}: records={len(records)} "
