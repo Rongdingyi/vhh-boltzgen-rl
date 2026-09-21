@@ -45,17 +45,21 @@ def forward_peer_prediction(model, *, full_query_batch: torch.Tensor,
                             multiplicity: int, peer_index: int,
                             device=DEVICE) -> torch.Tensor:
     """Exact full-batch replay; returns the peer branch clean prediction [N,3]."""
+    # official convention: the combined batch is [B*mult, N, 3] (3-dim) and
+    # multiplicity tells the model how many samples share one conditioning row
     query = full_query_batch.float()
-    if query.dim() == 3:
-        query = query.unsqueeze(0)             # [1, K, N, 3]
-    if query.shape[1] != multiplicity:
-        raise ValueError(f"query batch {query.shape[1]} != multiplicity {multiplicity}")
+    if query.dim() == 2:
+        query = query.unsqueeze(0)
+    if query.dim() != 3:
+        raise ValueError(f"query batch must be [B*mult, N, 3], got {tuple(query.shape)}")
+    if query.shape[0] != multiplicity:
+        raise ValueError(f"query batch {query.shape[0]} != multiplicity {multiplicity}")
     query = query.to(device)
     kwargs = network_kwargs(conditioning, multiplicity, device=device)
     sigma_t = torch.full((multiplicity,), float(sigma), device=device)
     denoised, _ = model.structure_module.preconditioned_network_forward(
         query, sigma_t, training=False, network_condition_kwargs=kwargs)
-    return denoised.float()[0, int(peer_index)]
+    return denoised.float()[int(peer_index)]
 
 
 def local_distill_loss(pred: torch.Tensor, target: torch.Tensor,

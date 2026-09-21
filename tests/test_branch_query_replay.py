@@ -24,7 +24,7 @@ class FakeStructureModule:
         self.seen["sigma_shape"] = tuple(sigma.shape)
         self.seen["multiplicity"] = network_condition_kwargs["multiplicity"]
         out = noisy.clone()
-        out[0, 0] += 10.0                             # mark branch index 0 only
+        out[0] += 10.0                                # mark branch index 0 only
         return out, {}
 
 
@@ -47,7 +47,7 @@ def test_replay_keeps_full_k_batch_and_selects_peer():
     pred = forward_peer_prediction(model, full_query_batch=query, sigma=1.25,
                                    conditioning=_conditioning(), multiplicity=k,
                                    peer_index=5, device="cpu")
-    assert model.structure_module.seen["shape"] == (1, k, n, 3)
+    assert model.structure_module.seen["shape"] == (k, n, 3)
     assert model.structure_module.seen["sigma_shape"] == (k,)
     assert model.structure_module.seen["multiplicity"] == k
     assert float(pred.mean()) == 0.0                  # peer slice 5, not branch 0
