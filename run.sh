@@ -287,7 +287,19 @@ case "$CMD" in
     run_gate env STAGE=gate3-eval sbatch "$ROOT/experiments/branch_distill/scripts/sbatch_branch_gpu.sh" ;;
   branch-gate3-report)
     run_gate env STAGE=gate3-report sbatch "$ROOT/experiments/branch_distill/scripts/sbatch_branch_cpu.sh" ;;
+  online-pref-freeze)
+    run_gate env STAGE=freeze sbatch "$ROOT/experiments/online_pref/scripts/sbatch_online_pref_cpu.sh" ;;
+  online-pref-smoke)
+    run_gate env STAGE=smoke sbatch "$ROOT/experiments/online_pref/scripts/sbatch_online_pref_cpu.sh" ;;
+  online-pref-p0-fix)
+    run_gate env STAGE=p0-check sbatch "$ROOT/experiments/online_pref/scripts/sbatch_online_pref_cpu.sh" ;;
+  online-pref-phase0)
+    run_gate env STAGE=phase0 sbatch "$ROOT/experiments/online_pref/scripts/sbatch_online_pref_gpu.sh" ;;
+  online-pref-phase0-eval)
+    run_gate env STAGE=phase0-eval sbatch "$ROOT/experiments/online_pref/scripts/sbatch_online_pref_gpu.sh" ;;
+  online-pref-phase0-report)
+    run_gate env STAGE=phase0-report sbatch "$ROOT/experiments/online_pref/scripts/sbatch_online_pref_cpu.sh" ;;
   *)
-    echo "usage: bash run.sh {audit|baseline|toy-reinforce|toy-grpo|scorer-overfit|evaluate|all-round1|next-*|cf-opsd-*|cfd2-*|slcf-*|ag-*|branch-*}" >&2
+    echo "usage: bash run.sh {audit|baseline|toy-reinforce|toy-grpo|scorer-overfit|evaluate|all-round1|next-*|cf-opsd-*|cfd2-*|slcf-*|ag-*|branch-*|online-pref-*}" >&2
     exit 2 ;;
 esac

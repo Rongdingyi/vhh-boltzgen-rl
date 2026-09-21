@@ -61,4 +61,10 @@ jobs:
             tests/test_branch_local_loss.py \
             tests/test_branch_no_credit_dependency.py \
             tests/test_branch_online_dpo_weights.py \
-            tests/test_branch_gate_logic.py
+            tests/test_branch_gate_logic.py \
+            tests/test_online_pair_all_changed.py \
+            tests/test_online_pair_no_geometry_dependency.py \
+            tests/test_online_pair_bank.py \
+            tests/test_online_query_accounting.py \
+            tests/test_online_update_schedule.py \
+            tests/test_online_pref_gates.py

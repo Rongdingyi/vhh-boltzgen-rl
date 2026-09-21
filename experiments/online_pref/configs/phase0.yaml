@@ -1,0 +1,25 @@
+# Phase 0: online refresh with all-changed support (task book §12.1)
+train_cases: [sab2_6u52_c, sab2_7sl5_d, sab2_7nqk_b, sab2_6mqe_h]
+heldout: all 8 test cases
+branch_progress: 0.60
+sampling_steps: 50
+siblings_per_case: 8
+rounds: 4
+updates_per_round: 25
+total_updates: 100
+pair_policy: [best_vs_worst, best_vs_median]
+min_reward_gap: 0.30
+behavior_ema_decay: 0.99
+beta: 10.0
+lr: 1.0e-5
+train_seeds: [20260915, 43, 44]
+eval_seed_offset: 700000
+arms:
+  A: offline fixed diff_only pairs, all changed, 100 updates
+  B: online sibling pairs, all changed, full sigma
+  V: same pair bank/schedule as B, carrier-verified support control
+gate:
+  mean_B_minus_A: 0.30
+  min_seeds_positive: 2
+  min_cases_B_ge_A: 4
+  max_invalid: 0.01
