@@ -35,9 +35,18 @@ def seed_augmentation(seed: int) -> None:
 
 
 def sample_full_sigma(structure_module, *, seed: int, device) -> torch.Tensor:
-    """Original training noise distribution (independent generator, §18)."""
+    """Original training noise distribution (independent generator, §18).
+
+    Same law as ``AtomDiffusion.noise_distribution``:
+        sigma = sigma_data * exp(P_mean + P_std * z),  z ~ N(0, 1)
+    reproduced here so the sampler can own its generator instead of consuming
+    the global RNG (the official method takes no generator argument).
+    """
+    device = device or getattr(structure_module, "device", None)
     g = make_generator(seed, device)
-    sigma = structure_module.noise_distribution(1, generator=g)
+    z = torch.randn((1,), generator=g, device=device, dtype=torch.float32)
+    sigma = structure_module.sigma_data * (
+        structure_module.P_mean + structure_module.P_std * z).exp()
     return sigma.reshape(-1)
 
 

@@ -44,3 +44,26 @@ def test_same_update_same_noise_tensor_across_arms():
     assert torch.equal(first, second)
     assert not torch.equal(first, third)
     assert first.shape == (1, 5, 3)
+
+
+def test_full_sigma_matches_official_distribution():
+    """§51.1: sampled log-sigma z has mean~0, std~1 (10k draws)."""
+    import math
+    import torch
+    from vhh_rl.online_pref.step_randomness import sample_full_sigma
+
+    class Stub:
+        sigma_data = 16.0
+        P_mean = 1.2
+        P_std = 0.8
+        device = "cpu"
+
+    zs = []
+    for seed in range(2000):
+        sigma = sample_full_sigma(Stub(), seed=seed, device="cpu")
+        value = float(sigma.reshape(-1)[0])
+        zs.append((math.log(value / Stub.sigma_data) - Stub.P_mean) / Stub.P_std)
+    mean = sum(zs) / len(zs)
+    var = sum((x - mean) ** 2 for x in zs) / len(zs)
+    assert abs(mean) < 0.06
+    assert abs(var ** 0.5 - 1.0) < 0.06
