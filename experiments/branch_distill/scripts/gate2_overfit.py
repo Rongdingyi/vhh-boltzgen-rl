@@ -27,6 +27,7 @@ def main() -> None:
     parser.add_argument("--updates", type=int, default=40)
     args = parser.parse_args()
     C.require_gate(C.GATE1_DIR / "gate1.json", "pass", True, args.override_gate, "Gate 1")
+    C.GATE2_DIR.mkdir(parents=True, exist_ok=True)
     records = [DistillRecord(**{k: v for k, v in row.items()
                                 if k in DistillRecord.__dataclass_fields__})
                for row in torch.load(C.GATE2_DIR / "records.pt", map_location="cpu",

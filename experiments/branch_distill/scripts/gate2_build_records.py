@@ -20,6 +20,7 @@ def main() -> None:
     parser.add_argument("--records", type=int, default=12)
     args = parser.parse_args()
     C.require_gate(C.GATE1_DIR / "gate1.json", "pass", True, args.override_gate, "Gate 1")
+    C.GATE2_DIR.mkdir(parents=True, exist_ok=True)
     selected = json.loads((C.GATE1_DIR / "selected_progress.json").read_text())
     cases = C.load_cases(C.TRAIN_CASES)
     payload = torch.load(C.GATE1_DIR / "branch_groups.pt", map_location="cpu",
