@@ -88,6 +88,21 @@ def test_zip_pair_order_and_tail_formula_contract():
     assert math.isclose(float(t_hat), sigma_tm * (1 + gamma), rel_tol=0, abs_tol=0)
 
 
+def test_explicit_scales_override_missing_module_defaults():
+    diffusion = StubDiffusion()
+    diffusion.step_scale = None
+    diffusion.noise_scale = None
+    sigmas, gammas, step_scales, noise_scales = tail_sampler.schedule_arrays(
+        diffusion, 10, device="cpu", step_scale=2.0, noise_scale=0.88)
+    assert torch.allclose(step_scales, torch.full((10,), 2.0))
+    assert torch.allclose(noise_scales, torch.full((10,), 0.88))
+    try:
+        tail_sampler.schedule_arrays(diffusion, 10, device="cpu")
+        raise AssertionError("expected ValueError")
+    except ValueError:
+        pass
+
+
 def test_official_source_contract_present_when_available():
     path = Path("/share/home/rongdingyi/programs/proteingen/boltzgen/src/boltzgen/"
                 "model/modules/diffusion.py")

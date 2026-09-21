@@ -78,7 +78,9 @@ def _build_round_groups(cfg: Gate3Config, round_idx: int, behavior_ckpt: Path,
             payload = {"case_id": case_id,
                        "sampler_states": info["sampler_states"],
                        "cond_kwargs_steps": info["cond_kwargs_steps"],
-                       "matches": info["matches"], "multiplicity": info["multiplicity"]}
+                       "matches": info["matches"],
+                       "multiplicity": info["multiplicity"],
+                       "sampling_scales": info.get("sampling_scales", {})}
             if round_idx == 1:
                 C.COMMON_ROUND1.mkdir(parents=True, exist_ok=True)
                 torch.save(payload, cache)
@@ -93,7 +95,9 @@ def _build_round_groups(cfg: Gate3Config, round_idx: int, behavior_ckpt: Path,
             multiplicity=cfg.siblings_per_case, num_sampling_steps=cfg.sampling_steps,
             group_seed=group_seed, reference_sequence=case.full_sequence,
             fr_positions=case.fr_positions, design_positions=case.design_positions,
-            scorer=scorer, spec=C.case_spec(case))
+            scorer=scorer, spec=C.case_spec(case),
+            step_scale=(payload.get("sampling_scales") or {}).get("step_scale"),
+            noise_scale=(payload.get("sampling_scales") or {}).get("noise_scale"))
         groups.append(group)
     return groups
 

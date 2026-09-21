@@ -69,7 +69,9 @@ def main() -> None:
                 "diffusion_conditioning":
                     record.conditioning["diffusion_conditioning"].to(C.DEVICE),
             },
-            seed=record.group_seed)
+            seed=record.group_seed,
+            step_scale=(record.meta.get("sampling_scales") or {}).get("step_scale"),
+            noise_scale=(record.meta.get("sampling_scales") or {}).get("noise_scale"))
         peer_endpoint = out["endpoint_coords"][record.peer_index].detach().cpu()
         audit = decode_coords_with_fr(peer_endpoint, record.conditioning["feats"],
                                       case.full_sequence, case.fr_positions)

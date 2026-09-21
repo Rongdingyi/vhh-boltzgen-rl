@@ -38,6 +38,7 @@ def main() -> None:
         case = cases[case_id]
         payload = torch.load(C.GATE1_DIR / "prefix" / f"{case_id}.pt",
                              map_location="cpu", weights_only=False)
+        scales = payload.get("sampling_scales", {}) or {}
         n_sources = len(payload["matches"])
         for source_index in range(min(n_sources, 2)):
             for progress in args.progress:
@@ -59,7 +60,9 @@ def main() -> None:
                     reference_sequence=case.full_sequence,
                     fr_positions=case.fr_positions,
                     design_positions=case.design_positions,
-                    scorer=scorer, spec=C.case_spec(case))
+                    scorer=scorer, spec=C.case_spec(case),
+                    step_scale=scales.get("step_scale"),
+                    noise_scale=scales.get("noise_scale"))
                 metrics = group_metrics(group.siblings, case.design_positions)
                 group.meta["group_metrics"] = metrics
                 groups.append(group)

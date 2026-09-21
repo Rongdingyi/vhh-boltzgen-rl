@@ -26,7 +26,9 @@ def run_branch_group(*, diffusion, case_id: str, source_sample_index: int,
                      multiplicity: int, num_sampling_steps: int, group_seed: int,
                      reference_sequence: str, fr_positions,
                      design_positions, scorer=None, spec=None,
-                     decode_endpoints: bool = True) -> BranchGroup:
+                     decode_endpoints: bool = True,
+                     step_scale: float | None = None,
+                     noise_scale: float | None = None) -> BranchGroup:
     """Sample K siblings from the captured state and score their endpoints."""
     feats = conditioning["feats"]
     atom_mask = feats["atom_pad_mask"]
@@ -47,6 +49,8 @@ def run_branch_group(*, diffusion, case_id: str, source_sample_index: int,
         atom_mask=atom_mask,
         network_condition_kwargs=network_kwargs,
         seed=group_seed,
+        step_scale=step_scale,
+        noise_scale=noise_scale,
     )
 
     endpoints = out["endpoint_coords"].detach().float().cpu()
@@ -107,7 +111,9 @@ def run_branch_group(*, diffusion, case_id: str, source_sample_index: int,
         meta={"n_sampling_steps": int(num_sampling_steps),
               "multiplicity": int(multiplicity),
               "coords_traj_tail": out["coords_traj_tail"],
-              "design_positions": tuple(design_positions)},
+              "design_positions": tuple(design_positions),
+              "sampling_scales": {"step_scale": step_scale,
+                                  "noise_scale": noise_scale}},
     )
     group.meta["group_metrics"] = group_metrics(siblings, design_positions)
     return group

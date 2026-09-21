@@ -93,6 +93,13 @@ def collect_case_rollouts(
         else:
             sigmas = sample_self.sample_schedule_dilated(num_steps)
         gammas = torch.where(sigmas > sample_self.gamma_min, sample_self.gamma_0, 0.0)
+        # exact scales the pipeline passed into sample(); needed to resume the
+        # same schedule in the tail sampler (values come from the checkpoint
+        # switching logic in boltz.py, not from the diffusion module defaults)
+        schedule["sampling_scales"] = {
+            "step_scale": kwargs.get("step_scale"),
+            "noise_scale": kwargs.get("noise_scale"),
+        }
         schedule.update({
             "sigmas": [float(s) for s in sigmas.tolist()],
             "t_hats": [float(sigmas[i]) * (1.0 + float(gammas[i + 1]))
@@ -210,6 +217,7 @@ def collect_case_rollouts(
         "case_id": case_id,
         "seed": int(seed),
         "sampler_states": sampler_states,
+        "sampling_scales": schedule.get("sampling_scales", {}),
         "contexts": contexts,
         "cond_kwargs": cond_kwargs,
         "cond_kwargs_steps": cond_kwargs_steps,

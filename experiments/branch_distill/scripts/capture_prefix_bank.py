@@ -37,6 +37,7 @@ def main() -> None:
             "cond_kwargs_steps": {int(k): v for k, v in info["cond_kwargs_steps"].items()},
             "matches": info["matches"],
             "multiplicity": info["multiplicity"],
+            "sampling_scales": info.get("sampling_scales", {}),
             "n_net_calls": info["n_net_calls"],
             "seed": case.seed_base + args.seed,
         }
@@ -45,6 +46,7 @@ def main() -> None:
         manifest[case_id] = {
             "prefix": str(path), "multiplicity": info["multiplicity"],
             "state_steps": sorted(steps), "matches": info["matches"],
+            "sampling_scales": info.get("sampling_scales", {}),
             "endpoint_sequences": [t.endpoint_sequence for t in trajectories],
         }
         print(f"[gate1-prefix] {case_id}: steps={sorted(steps)} "

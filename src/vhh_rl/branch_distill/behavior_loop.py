@@ -142,6 +142,7 @@ def _make_record(group, selection, target, touched, carrier):
               "teacher_endpoint": teacher.endpoint_coords,
               "peer_endpoint": peer.endpoint_coords,
               "design_positions": tuple(group.meta.get("design_positions", ())),
+              "sampling_scales": dict(group.meta.get("sampling_scales", {})),
               }, 
     )
 

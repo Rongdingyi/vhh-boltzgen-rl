@@ -28,6 +28,9 @@ def _boltz_helpers():
 
 
 def _default(value, fallback):
+    if value is None and fallback is None:
+        raise ValueError("no step/noise scale available: pass the scales captured "
+                         "by collect_case_rollouts (info['sampling_scales'])")
     return value if value is not None else fallback
 
 
