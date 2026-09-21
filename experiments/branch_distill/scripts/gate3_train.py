@@ -73,10 +73,16 @@ def _build_round_groups(cfg: Gate3Config, round_idx: int, behavior_ckpt: Path,
         if round_idx == 1 and cache.is_file():
             payload = torch.load(cache, map_location="cpu", weights_only=False)
         else:
-            adapter = C.make_adapter(behavior_ckpt, num_designs=1)
-            _traj, info = collect_case_rollouts(
-                adapter, C.spec_path(case), case_id, roll_dir, num_designs=1,
-                seed=case.seed_base + seed, cond_steps={step}, state_steps={step})
+            # the official design pipeline leaves grad globally disabled; restore
+            # it so the following optimizer updates stay differentiable
+            grad_was_enabled = torch.is_grad_enabled()
+            try:
+                adapter = C.make_adapter(behavior_ckpt, num_designs=1)
+                _traj, info = collect_case_rollouts(
+                    adapter, C.spec_path(case), case_id, roll_dir, num_designs=1,
+                    seed=case.seed_base + seed, cond_steps={step}, state_steps={step})
+            finally:
+                torch.set_grad_enabled(grad_was_enabled)
             payload = {"case_id": case_id,
                        "sampler_states": info["sampler_states"],
                        "cond_kwargs_steps": info["cond_kwargs_steps"],
@@ -128,6 +134,7 @@ def online_arm(arm: str, cfg: Gate3Config, out_dir: Path, seed: int) -> dict:
             fh.write(json.dumps(row) + "\n")
 
     rounds_log = []
+    torch.set_grad_enabled(True)
     for round_idx in range(1, cfg.rounds + 1):
         behavior_ckpt = (C.BASE_CKPT if round_idx == 1
                          else out_dir / f"behavior_r{round_idx - 1}.pt")
