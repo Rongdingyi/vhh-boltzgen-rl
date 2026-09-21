@@ -20,7 +20,10 @@ def network_kwargs(conditioning: dict, multiplicity: int, device=DEVICE) -> dict
     would stay on CPU and crash the encoders).
     """
     required = ("s_inputs", "s_trunk", "feats", "diffusion_conditioning")
-    if all(key in conditioning for key in required):
+    ready = (all(key in conditioning for key in required)
+             and isinstance(conditioning.get("feats"), dict)
+             and isinstance(conditioning.get("diffusion_conditioning"), dict))
+    if ready:
         from ..native_atom14.dpo_trainer import move_conditioning
         payload = {key: conditioning[key] for key in required}
         payload = move_conditioning(payload, device=device)

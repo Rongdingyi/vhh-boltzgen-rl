@@ -37,7 +37,7 @@ def _conditioning():
     feats = make_feats()
     feats = {k: (v.unsqueeze(0) if torch.is_tensor(v) else v) for k, v in feats.items()}
     return {"s_inputs": torch.zeros(1, 4, 1), "s_trunk": torch.zeros(1, 4, 1),
-            "feats": feats, "diffusion_conditioning": torch.zeros(1)}
+            "feats": feats, "diffusion_conditioning": {"nested": torch.zeros(1)}}
 
 
 def test_replay_keeps_full_k_batch_and_selects_peer():
