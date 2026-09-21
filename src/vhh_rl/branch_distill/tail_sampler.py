@@ -79,14 +79,19 @@ def continue_from_state(
     step_scale=None,
     noise_scale=None,
     assert_synchronized: bool = True,
+    device=None,
 ) -> dict:
     """Sample K siblings from one exact state, official equations only."""
     if not 0 <= start_step < num_sampling_steps:
         raise ValueError(f"start_step {start_step} outside [0,{num_sampling_steps})")
-    device = pre_state.device
+    if device is None:
+        try:
+            device = next(diffusion.parameters()).device
+        except (AttributeError, StopIteration):
+            device = pre_state.device
     if atom_mask.dim() == 1:
         atom_mask = atom_mask.unsqueeze(0)
-    atom_mask = atom_mask.repeat_interleave(multiplicity, 0)
+    atom_mask = atom_mask.to(device).repeat_interleave(multiplicity, 0)
     shape = (*atom_mask.shape, 3)
 
     sigmas, gammas, step_scales, noise_scales = schedule_arrays(
