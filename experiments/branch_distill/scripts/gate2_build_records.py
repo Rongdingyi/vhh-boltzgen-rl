@@ -72,6 +72,9 @@ def main() -> None:
     # Amendment 1: the gate is that every eligible record keeps at least one
     # carrier-verified position; the full-set carrier decode is diagnostic.
     carrier_ok = all(a.get("carrier_verified_positions", 0) > 0
+                     and not a.get("target_invalid")
+                     and a.get("target_fr") == 0
+                     and a.get("target_all_match")
                      for a in eligible_rows)
     summary = {
         "protocol_sha256": C.protocol_hash(),
@@ -84,6 +87,8 @@ def main() -> None:
         "carrier_original_pooled_rate": _pooled_rate(all_audits),
         "n_rows_original_carrier_invalid": sum(
             1 for a in eligible_rows if a.get("carrier_invalid")),
+        "n_rows_target_failed": sum(
+            1 for a in eligible_rows if not a.get("target_all_match")),
         "amendment_id": 1,
         "amendment_sha256": C.sha256(C.CONFIG_DIR / "AMENDMENT_1_VERIFIED_POSITIONS.yaml"),
     }

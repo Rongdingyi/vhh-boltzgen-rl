@@ -19,6 +19,7 @@ from .online_diff_dpo import online_dpo_step
 from .online_distill import MASK_MODES, online_distill_step
 from .query_fit import record_target_mask
 from .teacher_select import eligible, select_teacher_peer
+from .decode import decode_coords_with_fr
 from .local_target import (build_target, carrier_audit, carrier_positions_match,
                            changed_design_positions, verified_changed_positions)
 
@@ -116,15 +117,31 @@ def build_online_records(groups, cfg: Gate3Config, design_positions,
                 continue
             target, touched = build_target(peer.anchor_coords, teacher.endpoint_coords,
                                            feats, verified)
+            # truth check for the target actually used (§39 B): the target must
+            # decode to the teacher AA on the verified positions, stay valid and
+            # FR-clean
+            target_audit = decode_coords_with_fr(target, feats, reference_sequence,
+                                                 fr_positions)
+            target_match = carrier_positions_match(target_audit["sequence"],
+                                                   selection["teacher_sequence"],
+                                                   verified)
+            audit.update({
+                "target_invalid": target_audit["contains_invalid"],
+                "target_fr": target_audit["fr_mismatch"],
+                "target_all_match": bool(all(target_match.values())),
+                "target_matches": target_match,
+            })
             audits.append(audit)
             record = _make_record(group, {**selection,
                                           "changed_positions": tuple(verified)},
-                                  target, touched, carrier, verified)
+                                  target, touched, carrier, verified, target_audit,
+                                  target_match)
             records.append(record)
     return records, audits
 
 
-def _make_record(group, selection, target, touched, carrier, verified=None):
+def _make_record(group, selection, target, touched, carrier, verified=None,
+                 target_audit=None, target_match=None):
     from .types import DistillRecord
     teacher = group.siblings[selection["teacher_index"]]
     peer = group.siblings[selection["peer_index"]]
@@ -160,7 +177,10 @@ def _make_record(group, selection, target, touched, carrier, verified=None):
               "carrier_verified_positions": tuple(verified or selection["changed_positions"]),
               "carrier_invalid": bool(carrier["contains_invalid"]),
               "carrier_fr": int(carrier["fr_mismatch"]),
-              "carrier_all_match": True,   # verified subset decodes by construction
+              "target_invalid": bool((target_audit or {}).get("contains_invalid", False)),
+              "target_fr": int((target_audit or {}).get("fr_mismatch", 0)),
+              "target_all_match": bool(all((target_match or {}).values()))
+              if target_match else False,
               }, 
     )
 
