@@ -181,15 +181,8 @@ def run_online_update(arm: str, student, reference, records, cfg: Gate3Config,
     if not records:
         raise RuntimeError(f"arm {arm}: no eligible online records")
     record = rng.choice(records)
-    feats = record.conditioning["feats"]
-    network = {
-        "s_inputs": record.conditioning["s_inputs"].to(DEVICE),
-        "s_trunk": record.conditioning["s_trunk"].to(DEVICE),
-        "feats": {k: (v.to(DEVICE) if torch.is_tensor(v) else v)
-                  for k, v in feats.items()},
-        "multiplicity": record.branch_count,
-        "diffusion_conditioning": record.conditioning["diffusion_conditioning"].to(DEVICE),
-    }
+    from .query_fit import network_kwargs
+    network = network_kwargs(record.conditioning, record.branch_count, device=DEVICE)
     design_positions = record.meta.get("design_positions") or ()
     if arm == "B":
         teacher = record.meta["teacher_endpoint"].to(DEVICE)

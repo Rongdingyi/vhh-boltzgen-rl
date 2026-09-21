@@ -62,3 +62,15 @@ def test_multiplicity_mismatch_is_rejected():
         raise AssertionError("expected ValueError")
     except ValueError:
         pass
+
+
+def test_network_kwargs_moves_nested_conditioning():
+    from vhh_rl.branch_distill.query_fit import network_kwargs
+
+    conditioning = {"s_inputs": torch.zeros(1), "s_trunk": torch.zeros(1),
+                    "feats": {"coords": torch.zeros(2, 3)},
+                    "diffusion_conditioning": {"nested": {"value": torch.zeros(1)}}}
+    kwargs = network_kwargs(conditioning, 4, device="cpu")
+    assert kwargs["multiplicity"] == 4
+    assert kwargs["feats"]["coords"].device.type == "cpu"
+    assert kwargs["diffusion_conditioning"]["nested"]["value"].device.type == "cpu"

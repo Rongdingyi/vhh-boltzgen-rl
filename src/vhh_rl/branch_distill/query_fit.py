@@ -12,18 +12,29 @@ DEVICE = "cuda"
 
 
 def network_kwargs(conditioning: dict, multiplicity: int, device=DEVICE) -> dict:
-    feats = conditioning["feats"]
-    return {
-        "s_inputs": conditioning["s_inputs"].to(device),
-        "s_trunk": conditioning["s_trunk"].to(device),
-        "feats": {k: (v.to(device) if torch.is_tensor(v) else v)
-                  for k, v in feats.items()} if isinstance(feats, dict)
-        else feats.to(device),
-        "multiplicity": multiplicity,
-        "diffusion_conditioning": conditioning["diffusion_conditioning"].to(device)
-        if torch.is_tensor(conditioning["diffusion_conditioning"])
-        else conditioning["diffusion_conditioning"],
-    }
+    """Device-move conditioning, rebuilding captured partial callables.
+
+    Captured conditioning stores functools.partial objects as
+    {"__partial__": ...} dicts; only move_conditioning reconstructs them, so a
+    plain .to(device) is not enough (nested diffusion_conditioning entries
+    would stay on CPU and crash the encoders).
+    """
+    required = ("s_inputs", "s_trunk", "feats", "diffusion_conditioning")
+    if all(key in conditioning for key in required):
+        from ..native_atom14.dpo_trainer import move_conditioning
+        payload = {key: conditioning[key] for key in required}
+        payload = move_conditioning(payload, device=device)
+    else:
+        def _move(value):
+            if torch.is_tensor(value):
+                return value.to(device)
+            if isinstance(value, dict):
+                return {k: _move(v) for k, v in value.items()}
+            return value
+        payload = _move({key: conditioning[key] for key in conditioning
+                         if key in required or key == "feats"})
+    payload["multiplicity"] = multiplicity
+    return payload
 
 
 def forward_peer_prediction(model, *, full_query_batch: torch.Tensor,
