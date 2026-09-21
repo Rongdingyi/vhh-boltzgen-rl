@@ -155,6 +155,12 @@ def continue_from_state(
             atom_coords_noisy, t_hat, training=False,
             network_condition_kwargs=dict(multiplicity=multiplicity,
                                           **network_condition_kwargs))
+        if step_idx == start_step:
+            # exact network input / output of the first resumed step; captured
+            # BEFORE alignment_reverse_diff rewrites atom_coords_noisy (§15)
+            first_query = atom_coords_noisy.detach().clone()
+            first_anchor = atom_coords_denoised.detach().clone()
+            first_sigma = float(t_hat)
         if diffusion.alignment_reverse_diff:
             with torch.autocast("cuda", enabled=False):
                 atom_coords_noisy = weighted_rigid_align(
@@ -164,10 +170,6 @@ def continue_from_state(
         denoised_over_sigma = (atom_coords_noisy - atom_coords_denoised) / t_hat
         atom_coords_next = (atom_coords_noisy
                             + step_scale_t * (sigma_t - t_hat) * denoised_over_sigma)
-        if step_idx == start_step:
-            first_query = atom_coords_noisy.detach().clone()
-            first_anchor = atom_coords_denoised.detach().clone()
-            first_sigma = float(t_hat)
         coords_traj_tail.append(atom_coords.detach().float().cpu().clone())
         atom_coords = atom_coords_next
     coords_traj_tail.append(atom_coords.detach().float().cpu().clone())

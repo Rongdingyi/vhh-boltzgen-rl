@@ -100,3 +100,33 @@ def test_invalid_start_step_is_rejected():
             num_sampling_steps=10, multiplicity=2,
             atom_mask=torch.ones(1, 4, dtype=torch.bool),
             network_condition_kwargs={"feats": {}}, seed=1)
+
+
+class AlignedStub(StepStub):
+    def __init__(self):
+        super().__init__()
+        self.alignment_reverse_diff = True
+
+
+def test_first_query_is_the_network_input_not_the_aligned_tensor(monkeypatch):
+    """§15/§31: capture must happen before alignment_reverse_diff rewrites
+    atom_coords_noisy, otherwise the stored query cannot replay the anchor."""
+    seen_inputs = []
+
+    class Stub(AlignedStub):
+        def preconditioned_network_forward(self, noisy, sigma, training=False,
+                                           network_condition_kwargs=None):
+            seen_inputs.append(noisy.detach().clone())
+            return noisy * 0.5, {}
+
+    def align_adds_offset(a, b, w, m):
+        return a + 100.0
+
+    monkeypatch.setattr(tail_sampler, "_boltz_helpers",
+                        lambda: (_center, _augment, align_adds_offset))
+    out = tail_sampler.continue_from_state(
+        Stub(), pre_state=torch.randn(5, 3), start_step=1, num_sampling_steps=5,
+        multiplicity=1, atom_mask=torch.ones(1, 5, dtype=torch.bool),
+        network_condition_kwargs={"feats": {}}, seed=5)
+    assert torch.allclose(out["first_query"], seen_inputs[0], atol=1e-6)
+    assert not torch.allclose(out["first_query"], seen_inputs[0] + 100.0, atol=1e-3)
