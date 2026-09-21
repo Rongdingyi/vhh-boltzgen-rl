@@ -94,6 +94,15 @@ def continue_from_state(
     atom_mask = atom_mask.to(device).repeat_interleave(multiplicity, 0)
     shape = (*atom_mask.shape, 3)
 
+    def _to_device(value):
+        if torch.is_tensor(value):
+            return value.to(device)
+        if isinstance(value, dict):
+            return {k: _to_device(v) for k, v in value.items()}
+        return value
+
+    network_condition_kwargs = _to_device(network_condition_kwargs)
+
     sigmas, gammas, step_scales, noise_scales = schedule_arrays(
         diffusion, num_sampling_steps, device=device,
         step_scale=step_scale, noise_scale=noise_scale)
