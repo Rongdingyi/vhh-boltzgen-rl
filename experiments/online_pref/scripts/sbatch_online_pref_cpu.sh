@@ -11,12 +11,13 @@ ROOT=/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl
 export PYTHONPATH="$ROOT/src:/share/home/rongdingyi/programs/proteingen/boltzgen/src"
 export HF_HUB_OFFLINE=1 LAYERNORM_TYPE=torch
 PY=/share/home/rongdingyi/.conda/envs/vhh-guidance/bin/python
-STAGE=${STAGE:?set STAGE=freeze|smoke|p0-check|phase0-report|phase1-report}
+STAGE=${STAGE:?set STAGE=freeze|smoke|p0-check|phase0-report|sigma-audit|phase1-report}
 cd "$ROOT/experiments/online_pref/scripts"
 case "$STAGE" in
   freeze)  $PY -u freeze_protocol.py ;;
   p0-check) $PY -u p0_check.py ;;
   phase0-report) $PY -u phase0_report.py ;;
+  sigma-audit) $PY -u sigma_domain_audit.py ;;
   phase1-report) $PY -u phase1_report.py ;;
   smoke)
     $PY -m pytest -q "$ROOT/tests/test_online_pair_all_changed.py" \
