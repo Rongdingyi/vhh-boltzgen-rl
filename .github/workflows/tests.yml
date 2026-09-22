@@ -67,4 +67,8 @@ jobs:
             tests/test_online_pair_bank.py \
             tests/test_online_query_accounting.py \
             tests/test_online_update_schedule.py \
-            tests/test_online_pref_gates.py
+            tests/test_online_pref_gates.py \
+            tests/test_conditional_sigma.py \
+            tests/test_conditional_sigma_mass.py \
+            tests/test_prefix_suffix_disjoint.py \
+            tests/test_temporal_dpo_shared_randomness.py

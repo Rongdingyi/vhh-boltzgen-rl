@@ -12,7 +12,7 @@ ROOT=/share/home/rongdingyi/programs/proteingen/vhh_boltzgen_rl
 export PYTHONPATH="$ROOT/src:/share/home/rongdingyi/programs/proteingen/boltzgen/src"
 export HF_HUB_OFFLINE=1 LAYERNORM_TYPE=torch CUBLAS_WORKSPACE_CONFIG=:4096:8
 PY=/share/home/rongdingyi/.conda/envs/vhh-guidance/bin/python
-STAGE=${STAGE:?set STAGE=phase0|phase0-arm|phase0-v|phase0-eval}
+STAGE=${STAGE:?set STAGE=phase0|phase0-arm|phase0-v|phase0-eval|sigma-audit|phase1|phase1-eval}
 cd "$ROOT/experiments/online_pref/scripts"
 case "$STAGE" in
   phase0-arm)
@@ -34,6 +34,21 @@ case "$STAGE" in
       rm -rf "$ROOT/runs/online_pref/phase0/seed_${seed}/V"
       $PY -u phase0_train.py --arm v --seed "$seed"
     done ;;
+  sigma-audit) $PY -u sigma_domain_audit.py ;;
+  phase1)
+    for seed in 20260915 43 44; do
+      for region in full suffix prefix; do
+        out="$ROOT/runs/online_pref/phase1/seed_${seed}/T-${region}"
+        if [ -f "$out/student_r4.pt" ]; then
+          echo "[skip] phase1 seed $seed $region already complete"; continue
+        fi
+        $PY -u phase1_temporal_train.py --seed "$seed" --region "$region"
+      done
+    done ;;
+  phase1-eval)
+    SEEDS_ARG=""; [ -n "${SEEDS:-}" ] && SEEDS_ARG="--seeds $SEEDS"
+    REGIONS_ARG=""; [ -n "${REGIONS:-}" ] && REGIONS_ARG="--regions $REGIONS"
+    $PY -u phase1_eval.py $SEEDS_ARG $REGIONS_ARG ;;
   phase0-eval)
     ARMS_ARG=""; [ -n "${ARMS:-}" ] && ARMS_ARG="--arms $ARMS"
     SEEDS_ARG=""; [ -n "${SEEDS:-}" ] && SEEDS_ARG="--seeds $SEEDS"
