@@ -38,3 +38,25 @@ noise domain，不构成 trajectory-level DPO 证据。）
 - 建议：若继续这条线，应先解释“为什么 full-sigma 的 online refresh 优于
   suffix/prefix 限制”（例如 preference 信号在中间噪声域更可学），
   而不是继续加 temporal 结构；任何新假设需新的 protocol version。
+
+## 归档（代码内可追溯）
+
+- 汇总表与 artifact 索引：`results/online_pref/README.md`
+- gate / audit / eval / round 日志：`results/online_pref/artifacts/`
+- 每 arm 的完整训练日志仍在 `runs/online_pref/**`（含 pair banks，未入库）
+
+## 贡献排序（截止本轮，全部有 3-seed 证据）
+
+1. 空间支持定位（只训练好/差样本真正不同的 CDR 位点）——最稳定的核心；
+2. 在线 sibling 数据刷新——小而稳定（+0.415 ± 0.060），未达 +0.50 放量门槛；
+3. signed local DPO / region / adaptive credit / sibling distillation /
+   geometry-carrier filtering / branch-aware sigma restriction——均无跨 seed
+   稳定增益。
+
+## 回答“新方向是否又失败”
+
+- 新假设（时间域限制）**失败**：suffix < full，2/3 seeds 为负。
+- 但其前置步骤（在线数据刷新 + all-changed 支持）是**目前最干净的正面结果**
+  （首次与 geometry 过滤解耦，3/3 seeds 稳定），只是幅度未达放量门槛。
+- 因此本轮结论：保留 `online refresh + changed-position support` 作为候选
+  增益组件，停止 temporal 结构；不进入 24-case/valid100。

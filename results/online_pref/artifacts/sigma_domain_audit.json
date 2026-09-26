@@ -1,0 +1,27 @@
+{
+ "protocol_sha256": "f19e79cb0c0542dde4f7c4fe06f4b8b5837d2c0b3d91d75cf15e562e365db420",
+ "branch_progress": 0.6,
+ "branch_sigma_median": 10.394795963464816,
+ "branch_sigma_n": 12,
+ "train_sigma_median": 4.9548420906066895,
+ "suffix_mass_analytic": 0.6958416700363159,
+ "suffix_mass_mc": 0.6928499937057495,
+ "prefix_mass_analytic": 0.3041583299636841,
+ "conditional_suffix": {
+  "median": 2.6569048166275024,
+  "p10": 0.5237353444099426,
+  "p90": 7.869973182678223,
+  "min": 0.014415154233574867,
+  "max": 10.394342422485352,
+  "n": 5000
+ },
+ "conditional_prefix": {
+  "median": 22.37073516845703,
+  "p10": 11.878264427185059,
+  "p90": 81.6933364868164,
+  "min": 10.395834922790527,
+  "max": 3769.038818359375,
+  "n": 5000
+ },
+ "pass": true
+}
